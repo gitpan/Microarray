@@ -1,0 +1,30 @@
+Revision history for Perl extension Microarray.
+
+0.01  Tue Oct 23 11:49:46 2007
+	- original version released as TRL::Microarray
+	- created by h2xs 1.23 with options
+		-XAn TRL::Microarray
+0.23  Tue Nov 06 12:45:50 2007
+        - numerous updates
+            - Microarray module now functions as expected
+            - Image module now functions as expected
+            - GenePix module now aligned better with Quantarray/BlueFuse
+            - Added Clone_Locn_File module for parsing CGH genomic locations
+            - Testing of some modules still needs work; trust GenePix/Agilent at your peril
+0.24  Tue Nov 07 11:20:50 2007
+	- Fixed some GenePix and BlueFuse cross-format issues  
+        - Perldoc updates
+	- Removed pipeline_bac_feature packages from Feature
+0.241  Tue Nov 13 12:08:00 2007
+	- Update to package log_file in TRL::Microarray::Microarray_File
+	- Filehandle now created properly
+	- Some Perldoc changes
+0.26	Mon Nov 19 12:00:00 2007
+	- Major revision
+	- Package re-organised as Microarray
+	- Microarray::Microarray_File renamed as Microarray::File
+	- Microarray::Microarray_File::Data_File renamed as Microarray::File::Data
+	- Microarray::Microarray_File::GAL_File renamed as Microarray::File::GAL
+	- Microarray::Microarray_File::Clone_Locns_File renamed as Microarray::File::Clone_Locns
+	- Modules inheriting from Microarray::File::Data now reside in Microarray::File::Data:: namespace
+	- Microarray::File package microarray_image_file now moved to Microarray::File::Image
