@@ -19,7 +19,7 @@ Revision history for Perl extension Microarray.
 	- Update to package log_file in TRL::Microarray::Microarray_File
 	- Filehandle now created properly
 	- Some Perldoc changes
-0.3	Mon Nov 19 12:00:00 2007
+0.31	Mon Nov 19 12:00:00 2007
 	- Major revision
 	- Package re-organised as Microarray
 	- Microarray::Microarray_File renamed as Microarray::File

@@ -3,7 +3,7 @@ package Microarray::Spot;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '0.111';
+our $VERSION = '0.20';
 
 require Microarray;
 
