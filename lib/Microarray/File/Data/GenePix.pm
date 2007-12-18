@@ -325,6 +325,9 @@ our $VERSION = '0.18';
 			}
 		}
 	}
+	sub image_user_name {
+		return;
+	}
 	sub image_width {
 		my $self = shift;
 		my $hInfo = $self->get_header_info;

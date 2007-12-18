@@ -3,7 +3,7 @@ package Microarray::Image;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '0.112';
+our $VERSION = '0.117';
 
 use GD::Image;
 use Microarray::File;
@@ -134,15 +134,6 @@ use Microarray::File;
 		## first allocated colour is set to background
 		my $grey = $image->colorAllocate(180,180,180);
 	}
-	#sub set_plot_axis {
-	#
-	#}
-	#sub set_plot_labels {
-	#
-	#}
-	#sub set_plot_title {
-	#
-	#}
 	# plot the outline of the diagram, ready for spots to be added
 	sub plot_outline {
 		my $self = shift;
@@ -284,9 +275,6 @@ use Microarray::File;
 			}
 		}
 	}
-	sub default_scale {
-		100; 
-	}
 	sub x_length {
 		my $self = shift;
 		$self->{ _x_length };
@@ -405,6 +393,9 @@ use Microarray::File;
 		}
 		return(log(0.5*($ch1*$ch2))/log(2));
 	}
+	sub default_scale {
+		25; 
+	}
 }
 
 { package ri_plot;
@@ -479,6 +470,9 @@ use Microarray::File;
 		## y axis label
 		$image->stringUp($image->gdGiantFont,10,$middle,"Log2(R/G)",$black);
 		$image->stringUp($image->gdGiantFont,30,$middle - 25,"0",$black);
+	}
+	sub default_scale {
+		25; 
 	}
 }
 { package intensity_scatter;
@@ -561,6 +555,9 @@ use Microarray::File;
 		$image->stringUp($image->gdGiantFont,30,$y_length+50,"0",$black);
 		$image->stringUp($image->gdGiantFont,30,50,"$y_max_label",$black);
 	}
+	sub default_scale {
+		200; 
+	}
 }
 
 { package heatmap;
@@ -632,7 +629,7 @@ use Microarray::File;
 		}
 	}
 	sub default_scale {
-		50;
+		140;
 	}
 }
 
@@ -709,7 +706,6 @@ use Microarray::File;
 			$image->colorAllocate(255,$i,0); 	## Add green -> red = yellow
 		}	
 	}
-	
 }
 
 { package intensity_heatmap;
@@ -797,7 +793,9 @@ use Microarray::File;
 
 { package cgh_plot;
   
-	our @ISA = qw( plot );
+  	use Microarray::Analysis::CGH;
+  	
+	our @ISA = qw( plot chromosome_cgh );
 
 	sub new {
 		my $class = shift;
@@ -831,32 +829,7 @@ use Microarray::File;
 			$self->{ _y_values } = $oData_File->all_log2_ratio;
 			$self->{ _feature_names } = $oData_File->all_feature_names;
 		} else {
-			$oData_File->flip if ($self->flip_flop == -1);
-			my $spot_count = $oData_File->spot_count;
-			if ($self->embedded_locns){
-				for (my $i=0; $i<$spot_count; $i++){
-					if (my $embedded_locn = $oData_File->feature_id($i)){
-						my ($chr,$locn) = $self->parse_embedded_locn($embedded_locn);
-						next unless ($plot_chr eq $chr);
-						if (my $log = $oData_File->log2_ratio($i)){
-							$self->set_feature_data($oData_File->synonym_id($i),$log,$locn);
-						}
-					}
-				}	
-			} elsif (my $oClone_Positions = $self->clone_locns_file) {
-				my $hClones = $oClone_Positions->clone_hash;
-				for (my $i=0; $i<$spot_count; $i++){
-					my $feature = $oData_File->feature_id($i);
-					next unless (	(defined $$hClones{$feature}) && 
-									($plot_chr eq $$hClones{$feature}{_chr}) );
-					if (my $log = $oData_File->log2_ratio($i)){
-						$self->set_feature_data($feature,$log,$oClone_Positions->location($feature));
-					}
-				}
-			} else {
-				die "Microarray::Image cgh_plot ERROR; No clone positions to work with\n";
-			}
-			$self->order_data;
+			$self->sort_chromosome_data;
 		}
 		$self->{ _data_sorted } = 1;
 	}
@@ -875,111 +848,6 @@ use Microarray::File;
 	sub data_sorted {
 		my $self = shift;
 		$self->{ _data_sorted };
-	}
-	sub order_data {
-		my $self = shift;
-		my $hFeatures = $self->features;
-		my @aFeatures = keys %$hFeatures;
-		my $aSorted_Features = [];
-		if ($self->smoothing){
-			@$aSorted_Features = sort { $$hFeatures{ $a }{locn} <=> $$hFeatures{ $b }{locn} } @aFeatures;
-		} else {
-			$aSorted_Features = \@aFeatures;
-		}
-		my @aLog_Ratios = ();
-		my @aLocns = ();
-		
-		for my $feature (@$aSorted_Features){
-			push(@aLocns,$self->feature_locn($feature));
-			push(@aLog_Ratios,$self->feature_log($feature));
-		}
-
-		$self->{ _x_values } = [\@aLocns];
-		$self->{ _y_values } = [\@aLog_Ratios];
-		$self->{ _feature_names } = [$aSorted_Features];
-	}
-	sub flip_flop {
-		my $self = shift;
-		if (defined $self->{ _flip_flop }){
-			$self->{ _flip_flop };
-		} else {
-			return 1;
-		}
-	}
-	sub flip {
-		my $self = shift;
-		$self->{ _flip_flop } = -1;
-	}
-	sub flop {
-		my $self = shift;
-		$self->{ _flip_flop } = 1;
-	}
-	sub features {
-		my $self = shift;
-		unless (defined $self->{ _features }){
-			$self->{ _features } = {};
-		}
-		$self->{ _features };
-	}
-	sub feature_names {
-		my $self = shift;
-		$self->{ _feature_names };
-	}
-	sub feature_chrs {
-		my $self = shift;
-		$self->{ _feature_chrs };
-	}
-	sub get_feature_data {
-		my $self = shift;
-		my $feature = shift;
-		my $hFeatures = $self->features;
-		unless (defined $hFeatures->{ $feature }){
-			$hFeatures->{ $feature } = { ratios => [] };
-		}
-		$hFeatures->{ $feature };
-	}
-	sub set_feature_data {
-		my $self = shift;
-		my $hFeature_data = $self->get_feature_data(shift);	
-		my $aRatios = $hFeature_data->{ ratios };
-		push(@$aRatios,shift);
-		$hFeature_data->{ locn } = shift;
-	}
-	sub feature_locn {
-		my $self = shift;
-		my $hFeature = $self->get_feature_data(shift,shift);	# second shift for genome plot - chromosome name
-		return $hFeature->{locn};
-	}
-	sub feature_log {
-		my $self = shift;
-		my $hFeature = $self->get_feature_data(shift,shift);	# second shift for genome plot - chromosome name
-		my $aFeat_Ratios = $hFeature->{ratios};
-		if (@$aFeat_Ratios == 1){
-			return $aFeat_Ratios->[0];
-		} else {
-			my $log_ratio;
-			for my $ratio (@$aFeat_Ratios){
-				$log_ratio += $ratio;
-			}
-			return ($log_ratio/scalar @$aFeat_Ratios);
-		}
-	}
-	sub parse_embedded_locn {
-		my $self = shift;
-		my $location = shift;
-		my ($chr,$start,$end) = split(/:|\.\./,$location);
-		$chr =~ s/chr//;
-		return ($chr,int(($start+$end)/2));
-	}
-	sub clone_locns_file {
-		my $self = shift;
-		@_	?	$self->{ _clone_locns_file } = shift
-			:	$self->{ _clone_locns_file };
-	}
-	sub embedded_locns {
-		my $self = shift;
-		@_	?	$self->{ _embedded_locns } = shift
-			:	$self->{ _embedded_locns };
 	}
 	sub plot_centromere {
 		my $self = shift;
@@ -1019,6 +887,9 @@ use Microarray::File;
 	sub default_scale {
 		500000;
 	}
+	sub y_scale {
+		1;
+	}
 	# normalise the processed data relative to the image ready to be plotted
 	sub plot_data {
 		my $self = shift;
@@ -1027,6 +898,7 @@ use Microarray::File;
 		my $aX  = $$aaX[0];
 		my $aY  = $$aaY[0];
 		my $scale    = $self->scale;
+		my $y_scale    = $self->y_scale;
 		my $middle   = $self->middle;
 		my $x_margin = $self->x_margin;
 		my $zero_shift = $self->shift_zero;
@@ -1040,7 +912,7 @@ use Microarray::File;
 
 			## divide the y axis by 3 for a +1.5/-1.5 plot
 			$log2 += $zero_shift if ($zero_shift);
-			push(@$aLog2, $middle - ($log2 * (450/3)));
+			push(@$aLog2, ($middle - ($log2 * (450/3)))*$y_scale );
 		}
 		$self->{ _plotx_values } = $aLocns;
 		$self->{ _ploty_values } = $aLog2;
@@ -1049,18 +921,20 @@ use Microarray::File;
 	sub plot_dimensions {
 		my $self = shift;
 		my $scale = $self->scale;
-		my $aX   = $self->x_values;
-		my ($x_min,$x_max,$x_range) = $self->data_range($aX);
-		my $x = ($x_range /$scale);
-		my $y = 450;
+		my $y_scale = $self->y_scale;
+
+		my $chr_length = $self->chr_length($self->plot_chromosome);
+		my $x = int(($chr_length/$scale) + 1);
+		my $y = 450 * $y_scale;
 		my $x_margin = 0;
 		my $y_margin = 0;
 		$self->{ _x_length } = $x;
 		$self->{ _y_length } = $y;
-		$self->{ _x_margin } = $x_margin;
-		$self->{ _y_margin } = $y_margin;
-		$self->{ _middle } = ($y/2)+($y_margin/2) ;
-		return(($x + $x_margin), ($y + $y_margin));
+		$self->{ _x_margin } = 0;
+		$self->{ _y_margin } = 0;
+		$self->{ _middle } = $y/2;
+		
+		return ($x,$y);
 	}
 	sub plot_spots {
 		my $self = shift;
@@ -1083,6 +957,7 @@ use Microarray::File;
 
 		my $image = $self->gd_object;
 		my $scale = $self->scale;
+		my $y_scale = $self->y_scale;
 		my $chr = $self->plot_chromosome;
 		# get colours from the GD colour table 
 		my $black 	= $image->colorExact(0,0,0);
@@ -1090,13 +965,13 @@ use Microarray::File;
 		my $green 	= $image->colorExact(0,255,0);      
 		my $blue	= $image->colorExact(125,125,255);   
 		# 3px wide log2 ratio lines
-		$image->filledRectangle(0,150,3080,150,$red);		# +0.5
-		$image->filledRectangle(0,225,3080,225,$green);	#  0.0
-		$image->filledRectangle(0,300,3080,300,$red);		# -0.5
+		$image->filledRectangle(0,(150*$y_scale),3080,(150*$y_scale),$red);		# +0.5
+		$image->filledRectangle(0,(225*$y_scale),3080,(225*$y_scale),$green);	#  0.0
+		$image->filledRectangle(0,(300*$y_scale),3080,(300*$y_scale),$red);		# -0.5
 		# axis labels
-		$image->string($image->gdGiantFont,10,150,'0.5',$black);
-		$image->string($image->gdGiantFont,10,225,'0',$black);
-		$image->string($image->gdGiantFont,10,300,'-0.5',$black);
+		$image->string($image->gdGiantFont,10,(150*$y_scale),'0.5',$black);
+		$image->string($image->gdGiantFont,10,(225*$y_scale),'0',$black);
+		$image->string($image->gdGiantFont,10,(300*$y_scale),'-0.5',$black);
 		
 		if ($self->plot_centromere){
 			# dashed style for centromere lines
@@ -1104,200 +979,6 @@ use Microarray::File;
 			my $cen = int($self->chr_centromere($chr)/$scale);
 			$image->line($cen,0,$cen,$y,gdStyled);
 		}
-	}
-	sub do_smoothing {
-		my $self = shift;
-		@_	?	$self->{ _do_smoothing } = shift
-			:	$self->{ _do_smoothing };
-	}
-	sub smoothing {
-		my $self = shift;
-		if (@_){
-			$self->smooth_window(shift);
-			$self->smooth_step(shift);
-			$self->{ _do_smoothing }++;
-		} else {
-			$self->{ _do_smoothing };		
-		}
-	}
-	sub smooth_window {
-		my $self = shift;
-		if (@_){
-			$self->{ _smooth_window } = shift;
-			$self->{ _do_smoothing }++;
-		} else {
-			if (defined $self->{ _smooth_window }){
-				$self->{ _smooth_window };		
-			} else {
-				$self->default_smooth_window;
-			}
-		}
-	}
-	sub default_smooth_window {
-		500000
-	}
-	sub smooth_step {
-		my $self = shift;
-		if(@_){
-			$self->{ _smooth_step } = shift;
-			$self->{ _do_smoothing }++;
-		} else {
-			if (defined $self->{ _smooth_step }){
-				$self->{ _smooth_step };		
-			} else {
-				$self->default_smooth_step;
-			}
-		}
-	}
-	sub default_smooth_step {
-		150000
-	}
-	sub is_smoothed {
-		my $self = shift;
-		$self->{ _smoothed };
-	}
-	# apply a moving average to the log2 data
-	sub smooth_data_by_clone {
-		my $self   = shift;
-		my $window = $self->smooth_window;
-		my $step   = $self->smooth_step;
-		my $aX = $self->x_values;
-		my $aY = $self->y_values;
-		my $aSmooth_x = [];
-		my $aSmooth_y = [];
-		
-		for (my $i=0; $i<(@$aX-($window-1)); $i+=$step){
-			my $end = $i+($window-1);
-			my @xslice = @$aX[$i..$i+($window-1)];
-			my @yslice = @$aY[$i..$i+($window-1)];
-			my $locn_sum = 0;
-			my $log_sum = 0;
-			foreach my $locn (@xslice) {
-				$locn_sum += $locn;
-			}
-			foreach my $log (@yslice) {
-				$log_sum += $log;
-			}
-			push(@$aSmooth_x, ($locn_sum/$window));
-			push(@$aSmooth_y, ($log_sum/$window));
-		}
-		$self->{ _x_values } = $aSmooth_x;
-		$self->{ _y_values } = $aSmooth_y;
-		$self->{ _smoothed } = 1;
-	}
-	
-	# this method uses a moving window of a specific genomic length, 
-	# that moves along the genome in steps of a defined length,
-	# to smooth our CGH profiles. 
-	sub smooth_data_by_location {
-		my $self 			= shift;
-		
-		# our smoothing parameters
-		my $window 			= $self->smooth_window;
-		my $step 			= $self->smooth_step;
-		
-		# all of the sorted data
-		my $aAll_Locns 		= $self->x_values;
-		my $aAll_Logs 		= $self->y_values;
-
-		# arrays to hold the final smoothed data
-		my @aAll_Smooth_Locns 	= ();
-		my @aAll_Smooth_Logs 	= ();
-
-		# set the chromosome we are working with - single or whole genome?
-		my @aPlot_Chromosomes;
-		if (my $chr = $self->plot_chromosome){
-			@aPlot_Chromosomes = ($chr);
-		} else {
-			@aPlot_Chromosomes = (1..22,'X','Y');
-		}
-		
-		# scroll through the individual chromosomes...
-		for (my $j=0; $j<@aPlot_Chromosomes; $j++){
-		
-			# ...and get the sorted data for this chromosome
-			my $alocns 	= $aAll_Locns->[$j];
-			my $alogs 	= $aAll_Logs->[$j];
-			
-			# reset the window start and end location
-			my $start = $alocns->[0];
-			my $end = $start + $window;
-			
-			# arrays to hold the smoothed data for this chromosome
-			my @aSmooth_Chr_Locns 	= ();
-			my @aSmooth_Chr_Logs 	= ();
-			
-			#Êarrays to hold data in the moving window
-			my @aWindow_Logs		= ();
-			my @aWindow_Locns		= ();
-				
-			# scroll through the sorted data
-			for (my $i=0; $i<@$alocns; $i++){
-				my $genomic_locn = $alocns->[$i];
-				my $log_value    = $alogs->[$i]; 
-				
-				# are we past the end of the window?
-				if ($genomic_locn > $end){
-					# if so, average up what's in the window...
-					my ($av_locn, $av_log) = $self->moving_average(\@aWindow_Locns, \@aWindow_Logs);
-					# ...add these values to the smoothed data arrays...
-					push(@aSmooth_Chr_Locns, $av_locn);
-					push(@aSmooth_Chr_Logs, $av_log);
-					# ...move the end of the window to include the next location...
-					while ($genomic_locn > $end){ 
-						$end = (int($genomic_locn/100000) * 100000) + $step;
-						# ...move the start up as well...
-						$start = $end - $window;
-						# ...and remove any data that is no longer in the window
-						while ((@aWindow_Locns) && ($aWindow_Locns[0] < $start)){		# get rid of any values now out of the region 
-							my $shifted1 = shift @aWindow_Locns;
-							my $shifted2 = shift @aWindow_Logs;
-						}		
-					}
-				}
-				
-				# either this location fell in the window to start with, 
-				# or the window has now been moved to include it
-				# so we add it to the window array and continue to the next location
-				push (@aWindow_Locns, $genomic_locn);
-				push (@aWindow_Logs, $log_value);
-			
-			}
-			# we've finished with this chromosome, but have some values left in the last window
-			my ($av_locn, $av_log) = $self->moving_average(\@aWindow_Locns, \@aWindow_Logs);
-			push(@aSmooth_Chr_Locns, $av_locn);
-			push(@aSmooth_Chr_Logs, $av_log);
-			
-			# add the smoothed data for this chromosome to our array
-			# and then continue to the next chromosome
-			push(@aAll_Smooth_Locns,\@aSmooth_Chr_Locns);
-			push(@aAll_Smooth_Logs,\@aSmooth_Chr_Logs);
-		}
-
-		# finally, set all the smoothed data to our plotting values
-		$self->{ _x_values } = \@aAll_Smooth_Locns;
-		$self->{ _y_values } = \@aAll_Smooth_Logs;
-		$self->{ _smoothed } = 1;
-	
-	}
-	sub moving_average {
-		my $self = shift;
-		my $Locns = shift;
-		my $Logs  = shift;
-		my ($av_locn, $av_log2, $med_log2);
-		if (@$Locns > 1){
-			my $locn_stat = Statistics::Descriptive::Full->new();
-			my $log_stat = Statistics::Descriptive::Full->new();
-			$log_stat->add_data($Logs); 
-			$locn_stat->add_data($Locns); 
-			$av_locn = $locn_stat->mean;
-			$av_log2 = $log_stat->mean;
-			$med_log2 = $log_stat->median;
-		} elsif (@$Locns == 1){
-			$av_locn = @$Locns[0];
-			$av_log2 = @$Logs[0];
-		}
-		return($av_locn, $med_log2);
 	}
 	# set a rainbow of graduated colours in the GD colour table, for use in the plot 
 	sub set_plot_background {
@@ -1322,46 +1003,55 @@ use Microarray::File;
 		my $ratio = shift;
 		
 		my $image  = $self->gd_object;
-
+		my $y_scale = $self->y_scale;
 		# get colours from the GD colour table
 		my $red    = $image->colorExact(255,0,0);      
 		my $green  = $image->colorExact(0,255,0);      
 		my $yellow = $image->colorExact(255,255,0);      
 		my $colour;
-		if ($ratio <= 150){
+		if ($ratio <= (150*$y_scale)){
 			$colour = $red;
-		} elsif ($ratio >= 300){
+		} elsif ($ratio >= (300*$y_scale)){
 			$colour = $green;
-		} elsif ((262 > $ratio)&&($ratio > 187)) {
+		} elsif (((262*$y_scale) > $ratio)&&($ratio > (187*$y_scale))) {
 			$colour = $yellow;
-		} elsif ($ratio >= 262) {
-			my $red_hue = int(255-(6.8*($ratio-262)));				# factorial = 255/(low_yellow - green)
+		} elsif ($ratio >= (262*$y_scale)) {
+			my $red_hue = int(255-(6.8*($ratio-(262*$y_scale))));				# factorial = 255/(low_yellow - green)
 			$colour = $image->colorClosest($red_hue,255,0);		# reducing red, closer to green
 		} else {
-			my $green_hue = int(255-(6.9*(187-$ratio)));				# factorial = 255/(high_yellow - red)
+			my $green_hue = int(255-(6.9*((187*$y_scale)-$ratio)));				# factorial = 255/(high_yellow - red)
 			$colour = $image->colorClosest(255,$green_hue,0);	# reducing green, closer to red
 		}
 		return($colour);
 	}
 	sub image_map {
-		my $self      = shift;
-		my $scale     = shift;
-		my $link      = shift;   
-		my $aX        = $self->x_values;
-		my $aY        = $self->y_values;
-		my $aFeatures = $self->feature_names;
-		my $middle    = shift;
-		print "<MAP NAME=\"Map_one\">";
+		my $self 		= shift;
+		my ($aX,$aY) 	= $self->plot_data;
+		
+		my ($aFeatures,$feature);
+		if ($self->smoothing) {
+			$aFeatures = $self->x_values;		# genomic location of window centre
+			$feature = 'window';
+		} else {
+			$aFeatures = $self->feature_names;	# bac names
+			$feature = 'clone';
+		}
+		
+		my $map_name = 'cgh_plot';
+		if (@_){
+			$map_name = shift;
+		}
+		my $map_string = "<MAP NAME=\"$map_name\">\n";
+		
 		for (my $i=0; $i<@$aX; $i++){
 			my $x = $aX->[$i];
-			my $y = $aY->[$i];
-			my $feature = $aFeatures->[$i];
-			next unless ($x && $y);
-			$y = $middle - ($y * $scale);
-			$x = $x * $scale;
-			print "<AREA SHAPE=\"Circle\" COORDS=\"$x,$y, 5\" HREF=$link>";
+			my $y = int($aY->[$i]) + 225;
+			next unless (($x && $y)&&($y>0)&&($x>0));
+			my $element = $aFeatures->[0][$i];
+			$map_string .= "<area \"[$feature]=[$element]\" shape=\"circle\" coords=\"$x,$y,3\" />\n";
 		}
-		print "</MAP>";
+		$map_string .= "</MAP>\n";
+		return $map_string;
 	}
 	sub chr_centromere {
 		my $self = shift;
@@ -1396,11 +1086,46 @@ use Microarray::File;
 		);
 		return ($hCentromere{$chr});
 	}
-	
+	sub chr_length {
+		my $self = shift;
+		my $chr  = shift;
+		my %hChromosome = (		
+			# chr length
+			1 => 247249719,
+			2 => 242951149,
+			3 => 199501827,
+			4 => 191273063,
+			5 => 180857866,
+			6 => 170899992,
+			7 => 158821424,
+			8 => 146274826,
+			9 => 140273252,
+			10 => 135374737,
+			11 => 134452384,
+			12 => 132349534,
+			13 => 114142980,
+			14 => 106368585,
+			15 => 100338915,
+			16 => 88827254,
+			17 => 78774742,
+			18 => 76117153,
+			19 => 63811651,
+			20 => 62435964,
+			21 => 46944323,
+			22 => 49691432,
+			23 => 154913754,
+			'X' => 154913754,
+			24 => 57772954,
+			'Y' => 57772954,
+			25 => 3080419480	# END
+		);
+		return ($hChromosome{$chr});
+	}
 }
 { package genome_cgh_plot;
 
-	our @ISA = qw( cgh_plot );
+	# must try genome_cgh first, otherwise will move through cgh_plot to chromosome_cgh
+	our @ISA = qw( genome_cgh cgh_plot );	
 
 	sub sort_data {
 		my $self = shift;
@@ -1414,82 +1139,9 @@ use Microarray::File;
 			$self->{ _y_values } = $oData_File->all_log2_ratio;
 			$self->{ _feature_names } = $oData_File->all_feature_names;
 		} else {
-			$oData_File->flip if ($self->flip_flop == -1);
-			$self->{ _features } = {};	# reset the features for this chromosome
-			my $spot_count = $oData_File->spot_count;
-			if ($self->embedded_locns){
-				for (my $i=0; $i<$spot_count; $i++){
-					if (my $embedded_locn = $oData_File->feature_id($i)){
-						my ($chr,$locn) = $self->parse_embedded_locn($embedded_locn);
-						if (my $log = $oData_File->log2_ratio($i)){
-							$self->set_feature_data($oData_File->synonym_id($i),$log,$locn,$chr);
-						}
-					}
-				}	
-			} elsif (my $oClone_Positions = $self->clone_locns_file) {
-				my $hClones = $oClone_Positions->clone_hash;
-				for (my $i=0; $i<$spot_count; $i++){
-					my $feature = $oData_File->feature_id($i);
-					next unless (defined $$hClones{$feature});
-					if (my $log = $oData_File->log2_ratio($i)){
-						$self->set_feature_data($feature,$log,$oClone_Positions->location($feature),$$hClones{$feature}{_chr});
-					}
-				}
-			} else {
-				die "Microarray::Image cgh_plot ERROR; No clone positions to work with\n";
-			}
-			$self->order_genome_data;
+			$self->sort_genome_data;
 		}
 		$self->{ _data_sorted } = 1;
-	}
-	sub order_genome_data {
-		my $self = shift;
-		my $hFeatures = $self->features;
-		
-		my (@aFeatures,@aLocns,@aLog_Ratios);
-		
-		for my $chr ((1..22,'X','Y')){
-		
-			my $hChr_Features = $hFeatures->{ $chr };
-			my @aChr_Features = keys %$hChr_Features;
-			
-			my $aSorted_Chr_Features = [];
-			my $aSorted_Chr_Logs = [];
-			my $aSorted_Chr_Locns = [];
-			
-			if ($self->smoothing){
-				@$aSorted_Chr_Features = sort { $$hChr_Features{ $a }{locn} <=> $$hChr_Features{ $b }{locn} } @aChr_Features;
-			} else {
-				$aSorted_Chr_Features = \@aChr_Features;
-			}
-			for my $feature (@$aSorted_Chr_Features){
-				push(@$aSorted_Chr_Locns,$$hChr_Features{$feature}{ locn });
-				push(@$aSorted_Chr_Logs,$self->feature_log($feature,$chr));
-			}
-			push (@aFeatures,$aSorted_Chr_Features);
-			push (@aLocns,$aSorted_Chr_Locns);
-			push (@aLog_Ratios,$aSorted_Chr_Logs);
-		}
-		$self->{ _x_values } = \@aLocns;
-		$self->{ _y_values } = \@aLog_Ratios;
-		$self->{ _feature_names } = \@aFeatures;
-	}
-	sub set_feature_data {
-		my $self = shift;
-		my $hFeature_data = $self->get_feature_data(shift,pop);	# pop chromosome name
-		my $aRatios = $hFeature_data->{ ratios };
-		push(@$aRatios,shift);
-		$hFeature_data->{ locn } = shift;
-	}
-	sub get_feature_data {
-		my $self = shift;
-		my $feature = shift;
-		my $chr = shift;
-		my $hFeatures = $self->features;
-		unless (defined $hFeatures->{ $chr }{ $feature }){
-			$hFeatures->{ $chr }{ $feature } = { ratios => [] };
-		}
-		$hFeatures->{ $chr }{ $feature };
 	}
 	sub make_plot {
 		my $self  = shift;
@@ -1498,7 +1150,7 @@ use Microarray::File;
 		}
 		## chr 25 is the total length of the genome plus 25 margin
 		my $x_axis = ($self->chr_offset(25)/$self->scale)+25;
-		$self->{ _gd_object } = GD::Image->new($x_axis,450);	
+		$self->{ _gd_object } = GD::Image->new($x_axis,(450*$self->y_scale));	
 		$self->set_plot_background;
 		$self->make_colour_grads;
 		$self->make_outline;
@@ -1510,9 +1162,33 @@ use Microarray::File;
 		$self->plot_spots;
 		$self->return_image;
 	}
+	sub plot_dimensions {
+		my $self = shift;
+		my $scale = $self->scale;
+		my $y_scale = $self->y_scale;
+
+		my $genome_length = $self->chr_length(25);	# end
+		my $x = int(($genome_length/$scale) + 1);
+		my $y = 450 * $y_scale;
+		my $x_margin = 0;
+		my $y_margin = 0;
+		$self->{ _x_length } = $x;
+		$self->{ _y_length } = $y;
+		$self->{ _x_margin } = 0;
+		$self->{ _y_margin } = 0;
+		$self->{ _middle } = $y/2;
+		
+		return ($x,$y);
+	}
 	sub default_scale {
 		## set scale for the genome plot to 2.5Mb per pixel
 		2500000;
+	}
+	sub y_scale {
+		my $self = shift;
+		my $scale = $self->scale;
+		my $default_scale = $self->default_scale;
+		return $default_scale/$scale;
 	}
 	sub plot_chromosome {
 		return;
@@ -1520,6 +1196,7 @@ use Microarray::File;
 	sub plot_data {
 		my $self = shift;
 		my $scale = $self->scale;
+		my $y_scale = $self->y_scale;
 		my $aaX = $self->x_values;
 		my $aaY = $self->y_values;
 		
@@ -1538,7 +1215,7 @@ use Microarray::File;
 				push(@$aLocns, int($locn/$scale) + ($chr_offset/$scale) + 25);
 				$log2 += $zero_shift if ($zero_shift);
 				## multiply the log value by a quarter of the y axis to get a +2/-2 plot 
-				push(@$aLog2, 225 - ($log2 * (450/3)));
+				push(@$aLog2, (225 - ($log2 * (450/3)))*$y_scale );
 			}
 		}
 		$self->{ _plotx_values } = $aLocns;
@@ -1551,19 +1228,20 @@ use Microarray::File;
 		my $self = shift;
 		my $image = $self->gd_object;
 		my $scale = $self->scale;
+		my $y_scale = $self->y_scale;
 		# get colours from the GD colour table 
 		my $black 	= $image->colorExact(0,0,0);
 		my $red   	= $image->colorExact(255,0,0);      
 		my $green 	= $image->colorExact(0,255,0); 
 		my $blue	= $image->colorExact(125,125,255);   
 		# 3px wide log2 ratio lines
-		$image->filledRectangle(0,150,3080,150,$red);		# +0.5
-		$image->filledRectangle(0,225,3080,225,$green);		#  0.0
-		$image->filledRectangle(0,300,3080,300,$red);		# -0.5
+		$image->filledRectangle(0,(150*$y_scale),3080,(150*$y_scale),$red);		# +0.5
+		$image->filledRectangle(0,(225*$y_scale),3080,(225*$y_scale),$green);		#  0.0
+		$image->filledRectangle(0,(300*$y_scale),3080,(300*$y_scale),$red);		# -0.5
 		# axis labels
-		$image->string($image->gdSmallFont,0,150,'0.5',$black);
-		$image->string($image->gdSmallFont,0,225,'0',$black);
-		$image->string($image->gdSmallFont,0,300,'-0.5',$black);
+		$image->string($image->gdSmallFont,0,(150*$y_scale),'0.5',$black);
+		$image->string($image->gdSmallFont,0,(225*$y_scale),'0',$black);
+		$image->string($image->gdSmallFont,0,(300*$y_scale),'-0.5',$black);
 		# dashed style for centromere lines
 		$image->setStyle($blue,$blue,$blue,$blue,gdTransparent,gdTransparent);
 		
@@ -1575,10 +1253,10 @@ use Microarray::File;
 			if ($self->plot_centromere){
 				# centromere
 				my $cen = int(($self->chr_offset($chr)+$self->chr_centromere($chr))/$scale);
-				$image->line($cen+25,0,$cen+25,450,gdStyled);
+				$image->line($cen+25,0,$cen+25,(450*$y_scale),gdStyled);
 			}
 			# chr buffer
-			$image->filledRectangle($start+25,0,$start+25,450,$black);
+			$image->filledRectangle($start+25,0,$start+25,(450*$y_scale),$black);
 			# set chr names
 			my $chr_name;
 			if ($chr == 23){
@@ -1586,12 +1264,12 @@ use Microarray::File;
 			} elsif ($chr == 24){
 				$chr_name = 'Y';
 				# end line
-				$image->line($end+25,0,$end+25,450,$black);
+				$image->line($end+25,0,$end+25,(450*$y_scale),$black);
 			} else {
 				$chr_name = $chr;
 			}
 			# print chr name at bottom of plot
-			$image->string($image->gdSmallFont,$middle+20,425,$chr_name,$black);
+			$image->string($image->gdSmallFont,$middle+20,(425*$y_scale),$chr_name,$black);
 		}
 	}
 	sub chr_offset {
@@ -1727,7 +1405,7 @@ There are two types of CGH plot - a single chromosome plot (C<cgh_plot>) or a wh
 
 =item B<new()>
 
-Pass the data file and clone file objects at initialisation.
+Pass the L<Microarray::File::Data|Microarray::File::Data> and (optional) L<Microarray::File::Clone_Locns|Microarray::File::Clone_Locns> file objects at initialisation.
 
 =item B<make_plot()>
 
@@ -1749,10 +1427,6 @@ The following parameters can be set in the call to C<make_plot()>, or separately
 
 Set this parameter to indicate which chromosome to plot. Required for single chromosome plots using the C<cgh_plot> class. Must match the chromosome name provided by the clone positions file (or embedded data). 
 
-=item B<has_embedded_locns>
-
-By setting the C<has_embedded_locns> parameter to 1, the module expects the feature name to be in the 'ID' field of the data file (i.e. the C<synonym_id()> of the C<data_file> object) and the clone location to be present in the 'Name' field of the data file (i.e. the C<feature_id()> of the L<C<data_file>|Microarray::File::Data_File> object). The clone location should be of the notation 'chr1:12345..67890'. When using C<has_embedded_locns> a clone position file is not required. Disabled by default.
-
 =item B<plot_centromere>
 
 Set this parameter to zero to disable plotting of the centromere lines. Default is to plot the centromere locations as dashed blue lines. 
@@ -1761,27 +1435,19 @@ Set this parameter to zero to disable plotting of the centromere lines. Default 
 
 Pass an integer value to set the desired X-scale of the plot, in bp/pixel. Default for C<cgh_plot> (individual chromosome plot) is 500,000 bp per pixel; default for C<genome_cgh_plot> (whole genome plot) is 2,500,000 bp/pixel. 
 
-=item B<smooth_data_by_location>, B<do_smoothing>
-
-Set either of these parameters to 1 to perform data smoothing. The Log2 ratios in a window of C<$window> bp are averaged, and plotted against the central location of the window. The window moves in steps of C<$step> bp. Disabled by default. 
-
-=item B<smooth_window>, B<smooth_step>
-
-Set the desired window and step sizes for smoothing using these two parameters. A default window size of 500,000bp and step size of 150,000bp provide a moderate level of smoothing, removing outliers while preserving short regions of copy number change. Setting either of these parameters will invoke the smoothing process without setting C<do_smoothing>. 
-
 =item B<shift_zero>
 
 Set this parameter to a value by which all Log2 ratios will be adjusted. Useful to better align the plot with the zero line. 
 
-=item B<flip>
-
-Set this parameter to 1 in order to invert the log ratios returned by the L<C<data_file>|Microarray::File::Data_File> object.  
-
 =back
+
+=head2 Other analysis methods
+
+The cgh_plot and genome_cgh_plot classes can use methods from the L<Microarray::Analysis::CGH|Microarray::Analysis::CGH> module. Pass analysis parameters to the make_plot() method to implement L<flip()|Microarray::Analysis::CGH/"flip">, L<has_embedded_locns()|Microarray::Analysis::CGH/"has_embedded_locns">, L<do_smoothing()|Microarray::Analysis::CGH/"do_smoothing"> etc. 
 
 =head1 SEE ALSO
 
-L<Microarray|Microarray>, L<Microarray::File|Microarray::File>, L<Microarray::File::Data_File|Microarray::File::Data_File>, L<Microarray::File::Clone_Locn_File|Microarray::File::Clone_Locn_File>
+L<Microarray|Microarray>, L<Microarray::Analysis|Microarray::Analysis>, L<Microarray::Analysis::CGH|Microarray::Analysis::CGH>, L<Microarray::File|Microarray::File>, L<Microarray::File::Data_File|Microarray::File::Data_File>, L<Microarray::File::Clone_Locn_File|Microarray::File::Clone_Locn_File>
 
 =head1 PREREQUISITES
 

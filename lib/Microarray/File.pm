@@ -58,9 +58,9 @@ our $VERSION = '0.120';
 	}
 	sub close_filehandle {
 		my $self = shift;
-    my $filehandle = $self->filehandle;
-		  close $filehandle or die 
-			  "Microarray::File ERROR: Could not close filehandle\n$!\n";
+    	my $filehandle = $self->filehandle;
+		close $filehandle or die 
+			"Microarray::File ERROR: Could not close filehandle\n$!\n";
 	}
 	sub reset_filehandle {
 		my $self = shift;

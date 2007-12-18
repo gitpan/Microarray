@@ -28,3 +28,6 @@ Revision history for Perl extension Microarray.
 	- Microarray::Microarray_File::Clone_Locns_File renamed as Microarray::File::Clone_Locns
 	- Modules inheriting from Microarray::File::Data now reside in Microarray::File::Data:: namespace
 	- Microarray::File package microarray_image_file now moved to Microarray::File::Image
+0.32	Mon Dec 17 12:00:00 2007
+	- New modules Microarray::Analysis and Microarray::Analysis::CGH
+	- Some methods from CGH plots in Microarrary::Image now moved to Microarray::Analysis::CGH

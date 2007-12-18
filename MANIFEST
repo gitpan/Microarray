@@ -8,6 +8,8 @@ t/Microarray-File-Data.t
 t/Microarray-File-Data-BlueFuse.t
 t/Microarray-File-Data-Quantarray.t
 lib/Microarray.pm
+lib/Microarray/Analysis.pm
+lib/Microarray/Analysis/CGH.pm
 lib/Microarray/Feature.pm
 lib/Microarray/File.pm
 lib/Microarray/Image.pm
