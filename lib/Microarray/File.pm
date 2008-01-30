@@ -3,7 +3,7 @@ package Microarray::File;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '0.120';
+our $VERSION = '1.23';
 
 { package microarray_file;
 
@@ -239,7 +239,7 @@ our $VERSION = '0.120';
 	}	
 	sub set_delimiter { 
 		my $self = shift;
-		if ($self->file_name =~ /.csv$/) {
+		if ($self->file_name =~ /.csv$/i) {
 			$self->{ _delimiter } = ",";
 		} else {
 			$self->{ _delimiter } = "\t";

@@ -3,7 +3,7 @@ package Microarray::File::Data;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '0.216';
+our $VERSION = '2.17';
 
 require Microarray::File;
 require Microarray::File::Data::Quantarray;

@@ -3,7 +3,7 @@ package Microarray::File::GAL;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '0.214';
+our $VERSION = '2.15';
 
 require Microarray::File;
 

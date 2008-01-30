@@ -3,7 +3,7 @@ package Microarray::File::Image;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '0.12';
+our $VERSION = '1.3';
 
 { package microarray_image_file;
 

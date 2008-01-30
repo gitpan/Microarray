@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Exporter;
 our @ISA = qw( Exporter );
-our $VERSION = '0.32';
+our $VERSION = '0.33';
 
 require Microarray::File;
 use Microarray::Feature;

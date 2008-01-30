@@ -3,7 +3,7 @@ package Microarray::Feature;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '0.112';
+our $VERSION = '1.13';
 
 require Microarray;
 

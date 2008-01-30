@@ -3,7 +3,7 @@ package Microarray::Image;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '0.117';
+our $VERSION = '1.22';
 
 use GD::Image;
 use Microarray::File;
@@ -877,7 +877,7 @@ use Microarray::File;
 		$self->{ _gd_object } = GD::Image->new($x,$y);
 		$self->set_plot_background;
 		$self->make_colour_grads;
-		$self->make_outline($y);
+		$self->make_outline($x,$y);
 		if ($self->smoothing) {
 			$self->smooth_data_by_location;
 		}			
@@ -953,6 +953,7 @@ use Microarray::File;
 	sub make_outline {	
 		use GD;
 		my $self = shift;
+		my $x = shift;
 		my $y = shift;
 
 		my $image = $self->gd_object;
@@ -965,9 +966,9 @@ use Microarray::File;
 		my $green 	= $image->colorExact(0,255,0);      
 		my $blue	= $image->colorExact(125,125,255);   
 		# 3px wide log2 ratio lines
-		$image->filledRectangle(0,(150*$y_scale),3080,(150*$y_scale),$red);		# +0.5
-		$image->filledRectangle(0,(225*$y_scale),3080,(225*$y_scale),$green);	#  0.0
-		$image->filledRectangle(0,(300*$y_scale),3080,(300*$y_scale),$red);		# -0.5
+		$image->filledRectangle(0,(150*$y_scale),$x,(150*$y_scale),$red);		# +0.5
+		$image->filledRectangle(0,(225*$y_scale),$x,(225*$y_scale),$green);	#  0.0
+		$image->filledRectangle(0,(300*$y_scale),$x,(300*$y_scale),$red);		# -0.5
 		# axis labels
 		$image->string($image->gdGiantFont,10,(150*$y_scale),'0.5',$black);
 		$image->string($image->gdGiantFont,10,(225*$y_scale),'0',$black);
@@ -1009,18 +1010,33 @@ use Microarray::File;
 		my $green  = $image->colorExact(0,255,0);      
 		my $yellow = $image->colorExact(255,255,0);      
 		my $colour;
-		if ($ratio <= (150*$y_scale)){
-			$colour = $red;
-		} elsif ($ratio >= (300*$y_scale)){
+		
+		# DEFAULT SCALE = 2500000 = 450 pixels in Y axis
+		#  plot is 450 pixels * $y_scale
+		# +1 is at 150
+		#  0 is at 225
+		# -1 is at 300
+		# have a 70 pixel yellow region across 0 
+		# making a colour gradient across an 80 pixel region, 40 pixels either side of +/-1
+		# have created 85 colours for each gradient 
+		
+		# 255 hues / 80 pixels = 3.1875 hues per pixel for the default
+		my $factor = 255/(80 * $y_scale);
+		
+		if ($ratio <= (110*$y_scale)){	# was 150
 			$colour = $green;
-		} elsif (((262*$y_scale) > $ratio)&&($ratio > (187*$y_scale))) {
+		} elsif ($ratio >= (340*$y_scale)){	# was 300
+			$colour = $red;
+		} elsif (((260*$y_scale) > $ratio)&&($ratio > (190*$y_scale))) {	# was 262,187
 			$colour = $yellow;
-		} elsif ($ratio >= (262*$y_scale)) {
-			my $red_hue = int(255-(6.8*($ratio-(262*$y_scale))));				# factorial = 255/(low_yellow - green)
-			$colour = $image->colorClosest($red_hue,255,0);		# reducing red, closer to green
+		} elsif ($ratio >= (260*$y_scale)) {
+			# calculate how much red to remove from yellow, to create green
+			my $green_hue = int(255-($factor*($ratio-(260*$y_scale))));				# factorial = 255/(low_yellow - green)
+			$colour = $image->colorClosest(255,$green_hue,0);						# reducing red, closer to green
 		} else {
-			my $green_hue = int(255-(6.9*((187*$y_scale)-$ratio)));				# factorial = 255/(high_yellow - red)
-			$colour = $image->colorClosest(255,$green_hue,0);	# reducing green, closer to red
+			# calculate how much green to remove from yellow, to create red
+			my $red_hue = int(255-($factor*((190*$y_scale)-$ratio)));				# factorial = 255/(high_yellow - red)
+			$colour = $image->colorClosest($red_hue,255,0);					# reducing green, closer to red
 		}
 		return($colour);
 	}
@@ -1143,32 +1159,12 @@ use Microarray::File;
 		}
 		$self->{ _data_sorted } = 1;
 	}
-	sub make_plot {
-		my $self  = shift;
-		if (@_){
-			$self->parse_args(@_);
-		}
-		## chr 25 is the total length of the genome plus 25 margin
-		my $x_axis = ($self->chr_offset(25)/$self->scale)+25;
-		$self->{ _gd_object } = GD::Image->new($x_axis,(450*$self->y_scale));	
-		$self->set_plot_background;
-		$self->make_colour_grads;
-		$self->make_outline;
-
-		$self->sort_data;
-		if ($self->smoothing) {
-			$self->smooth_data_by_location;
-		}			
-		$self->plot_spots;
-		$self->return_image;
-	}
 	sub plot_dimensions {
 		my $self = shift;
 		my $scale = $self->scale;
 		my $y_scale = $self->y_scale;
-
 		my $genome_length = $self->chr_length(25);	# end
-		my $x = int(($genome_length/$scale) + 1);
+		my $x = ($genome_length/$scale)+25;
 		my $y = 450 * $y_scale;
 		my $x_margin = 0;
 		my $y_margin = 0;
@@ -1226,6 +1222,8 @@ use Microarray::File;
 	sub make_outline {
 		use GD;
 		my $self = shift;
+		my $x = shift;
+		my $y = shift;
 		my $image = $self->gd_object;
 		my $scale = $self->scale;
 		my $y_scale = $self->y_scale;
@@ -1235,9 +1233,9 @@ use Microarray::File;
 		my $green 	= $image->colorExact(0,255,0); 
 		my $blue	= $image->colorExact(125,125,255);   
 		# 3px wide log2 ratio lines
-		$image->filledRectangle(0,(150*$y_scale),3080,(150*$y_scale),$red);		# +0.5
-		$image->filledRectangle(0,(225*$y_scale),3080,(225*$y_scale),$green);		#  0.0
-		$image->filledRectangle(0,(300*$y_scale),3080,(300*$y_scale),$red);		# -0.5
+		$image->filledRectangle(0,(150*$y_scale),$x,(150*$y_scale),$red);		# +0.5
+		$image->filledRectangle(0,(225*$y_scale),$x,(225*$y_scale),$green);		#  0.0
+		$image->filledRectangle(0,(300*$y_scale),$x,(300*$y_scale),$red);		# -0.5
 		# axis labels
 		$image->string($image->gdSmallFont,0,(150*$y_scale),'0.5',$black);
 		$image->string($image->gdSmallFont,0,(225*$y_scale),'0',$black);

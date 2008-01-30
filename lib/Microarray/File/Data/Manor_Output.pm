@@ -3,7 +3,7 @@ package Microarray::File::Data::Manor_Output;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '0.16';
+our $VERSION = '1.7';
 
 # not yet tested
 

@@ -80,7 +80,7 @@ test "Array QC" => sub {
 	cmp_ok($oFile->mean_ch2_amp,'==',1654.71,'mean_ch2_amp');
 	cmp_ok($oFile->sbr_ch1,'==',8.05,'sbr_ch1');
 	cmp_ok($oFile->sbr_ch2,'==',13.52,'sbr_ch2');
-	eq_or_diff $oFile->bad_flags,{ 'C'=>'1', 'D'=>'1', 'E'=>'1' },'bad_flags';
+	eq_or_diff $oFile->bad_flags,{ 'D'=>'1', 'E'=>'1' },'bad_flags';
 };
 test "Data" => sub {
 	test "Spot 1" => sub {

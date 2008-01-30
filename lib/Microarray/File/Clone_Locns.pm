@@ -3,7 +3,7 @@ package Microarray::File::Clone_Locns;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '0.15';
+our $VERSION = '1.6';
 
 require Microarray::File;
 

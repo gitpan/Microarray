@@ -3,7 +3,7 @@ package Microarray::File::Data::Quantarray;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '0.215';
+our $VERSION = '2.17';
 
 
 
@@ -112,7 +112,7 @@ our $VERSION = '0.215';
 			warn 	"Microarray::File::Data::Quantarray WARNING: \n".
 					"Data file '".$self->file_name."'\n".
 					"Could not find a barcode in the header information - guessing its the first part of the file name\n";
-			#$self->guess_barcode;	# from data_file
+			$self->guess_barcode;	# from data_file
 		}
 	}
 	sub gal_file {

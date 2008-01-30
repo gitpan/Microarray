@@ -31,3 +31,8 @@ Revision history for Perl extension Microarray.
 0.32	Mon Dec 17 12:00:00 2007
 	- New modules Microarray::Analysis and Microarray::Analysis::CGH
 	- Some methods from CGH plots in Microarrary::Image now moved to Microarray::Analysis::CGH
+0.33	Mon Jan 21 12:00:00 2008
+	- Microarray::Image - changes to colour graduation in package cgh_plot
+	- Microarray::File - fixed set_delimiter to ignore case of file extension
+	- Microarray::File::Data::Quantarray - will now guess the barcode from file name
+	- Microarray::File::Data::GenePix - various bug fixes to slide_barcode(), laser_power(), image_resolution() 

@@ -3,7 +3,7 @@ package Microarray::File::Data::GenePix;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '0.18';
+our $VERSION = '1.15';
 
 
 { package genepix_file;
@@ -328,6 +328,24 @@ our $VERSION = '0.18';
 	sub image_user_name {
 		return;
 	}
+	sub fluor_name {
+	    return;
+	}
+	sub laser_id {
+	    return;
+	}
+	sub filter_id {
+	    return;
+	}
+	sub image_resolution {
+	    my $self = shift;
+	    my $hInfo = $self->get_header_info;
+		my $res = $hInfo->{'XResolution'};
+		return (10000/$res);
+	}
+	sub scan_speed {
+	    return;
+	}
 	sub image_width {
 		my $self = shift;
 		my $hInfo = $self->get_header_info;
@@ -346,6 +364,11 @@ our $VERSION = '0.18';
 	sub laser_power {
 		my $self = shift;
 		my $hInfo = $self->get_header_info;
+		return $hInfo->{'_ScanPower'};
+	}
+	sub laser_power_watts {
+		my $self = shift;
+		my $hInfo = $self->get_header_info;
 		return $hInfo->{'_LaserPower'};
 	}
 	sub pmt_gain {
@@ -361,7 +384,15 @@ our $VERSION = '0.18';
 	sub slide_barcode {
 		my $self = shift;
 		my $hInfo = $self->get_header_info;
-		return $hInfo->{'_Barcode'};
+		my $barcode = $hInfo->{'_Barcode'};
+		if ($barcode) {
+		  return $barcode;		
+		} else {
+			warn 	"Microarray::File::Data::GenePix WARNING: \n".
+					"Image file '".$self->file_name."'\n".
+					"Could not find a barcode in the image header - guessing its the first part of the file name\n";
+			return $self->guess_slide_barcode;
+		  }
 	}
 	sub image_name {
 		my $self = shift;
@@ -520,9 +551,9 @@ Returns the slide barcode associated with the scan.
 
 The wavelength of the laser used to generate the image. Returns both wavelengths from combined image files.
 
-=item B<pmt_gain>, B<laser_power>, B<scan_power>
+=item B<pmt_gain>, B<laser_power>, B<laser_power_watts>, B<scan_power>
 
-PMT and laser powers used in the scan - return null from combined image files. No idea what C<'scan_power'> really means - always returns 100 for our scans! 
+PMT and laser powers used in the scan - return null from combined image files. laser_power() and scan_power() return the same value, which is the laser power as a percentage. laser_power_watts() returns that actual mW value of the laser power at the time of scanning. 
 
 =item B<image_name>, B<image_width>, B<image_height>, B<image_datetime>
 
@@ -531,6 +562,14 @@ Basic image information.
 =item B<image_scanner>, B<collection_software>
 
 Scanner model and serial number, and some strange code that doesn't appear to have anything to do with the software version. Go figure....
+
+=item B<image_resolution>
+
+Returns the pixel size in microns. This is calculated from the 'XResolution' value, which describes how many pixels there are in a specified unit. For the Axon4000B this is set to 1cm, and although we haven't tested it for other Axon scanners we're assuming it is likely to be the same.  
+
+=item Other methods returning undefined values
+
+There are a few methods that return undefined values, for compatibility with other Microarray::File::Data modules (actually, that means ::Quantarray). These are image_user_name, fluor_name, laser_id and filter_id.  
 
 =back
 
