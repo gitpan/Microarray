@@ -31,9 +31,9 @@ begin_skipping_tests "The test-file 'quantarray.csv' could not be found" unless 
 test "Object creation" => sub {
 	ok($oArray = microarray->new('10001',$file),'object creation');
 	isa_ok($oArray,'microarray','microarray object');
+	$oArray->set_param(min_snr=>2,high_signal=>65000,low_signal=>500,signal_quality=>50);
 };
 
-$oArray->set_param(min_snr=>2,high_signal=>65000,low_signal=>500,signal_quality=>50);
 
 test "getting and setting params for spot quality assessment criteria" => sub {
     is($oArray->low_signal,'500','low_signal');
@@ -50,9 +50,9 @@ test "getting and setting params for spot quality assessment criteria" => sub {
     is($oArray->genetic_data_source,'data_file','genetic_data_source');
 };
 
-$oArray->set_reporter_data;
 
 test "get reporter data" => sub {
+	$oArray->set_reporter_data;
 	ok($oReporter = $oArray->get_reporter('RP13-827M24'),'get_reporter'); 
 	ok($aReporter_Objects = $oArray->get_reporter_objects,'get_reporter_objects'); 
 	ok($aReporter_Names = $oArray->get_reporter_ids,'get_reporter_ids'); 
