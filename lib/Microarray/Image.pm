@@ -3,7 +3,7 @@ package Microarray::Image;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '1.22';
+our $VERSION = '1.23';
 
 use GD::Image;
 use Microarray::File;
@@ -827,7 +827,7 @@ use Microarray::File;
 			$oData_File->isa('processed_bluefuse_data') ){	# already sorted by seq_start, already flip_flopped
 			$self->{ _x_values } = $oData_File->all_locns;
 			$self->{ _y_values } = $oData_File->all_log2_ratio;
-			$self->{ _feature_names } = $oData_File->all_feature_names;
+			$self->{ _reporter_names } = $oData_File->all_feature_names;
 		} else {
 			$self->sort_chromosome_data;
 		}
@@ -1044,13 +1044,13 @@ use Microarray::File;
 		my $self 		= shift;
 		my ($aX,$aY) 	= $self->plot_data;
 		
-		my ($aFeatures,$feature);
+		my ($aReporters,$reporter);
 		if ($self->smoothing) {
-			$aFeatures = $self->x_values;		# genomic location of window centre
-			$feature = 'window';
+			$aReporters = $self->x_values;		# genomic location of window centre
+			$reporter = 'window';
 		} else {
-			$aFeatures = $self->feature_names;	# bac names
-			$feature = 'clone';
+			$aReporters = $self->reporter_names;	# bac names
+			$reporter = 'clone';
 		}
 		
 		my $map_name = 'cgh_plot';
@@ -1063,8 +1063,8 @@ use Microarray::File;
 			my $x = $aX->[$i];
 			my $y = int($aY->[$i]) + 225;
 			next unless (($x && $y)&&($y>0)&&($x>0));
-			my $element = $aFeatures->[0][$i];
-			$map_string .= "<area \"[$feature]=[$element]\" shape=\"circle\" coords=\"$x,$y,3\" />\n";
+			my $element = $aReporters->[0][$i];
+			$map_string .= "<area \"[$reporter]=[$element]\" shape=\"circle\" coords=\"$x,$y,3\" />\n";
 		}
 		$map_string .= "</MAP>\n";
 		return $map_string;
@@ -1153,7 +1153,7 @@ use Microarray::File;
 			$oData_File->isa('processed_scanarray_data')){	# already sorted by [chr],seq_start
 			$self->{ _x_values } = $oData_File->all_locns;
 			$self->{ _y_values } = $oData_File->all_log2_ratio;
-			$self->{ _feature_names } = $oData_File->all_feature_names;
+			$self->{ _reporter_names } = $oData_File->all_feature_names;
 		} else {
 			$self->sort_genome_data;
 		}
@@ -1378,7 +1378,7 @@ One difference between heatmaps and other plots is in their implementation of th
 
 =head1 CGH PLOT
 
-There are two types of CGH plot - a single chromosome plot (C<cgh_plot>) or a whole genome plot (C<genome_cgh_plot>). The big difference between CGH plots and the other types described above is of course that they require genomic mapping data for each feature. This can be loaded into the object using a L<C<clone_locn_file>|Microarray::File::Clone_Locn_File> object (see below) or using information embedded in the data file by setting the C<embedded_locns> flag. 
+There are two types of CGH plot - a single chromosome plot (C<cgh_plot>) or a whole genome plot (C<genome_cgh_plot>). The big difference between CGH plots and the other types described above is of course that they require genomic mapping data for each reporter. This can be loaded into the object using a L<C<clone_locn_file>|Microarray::File::Clone_Locn_File> object (see below) or using information embedded in the data file by setting the C<embedded_locns> flag. 
 
 	use Microarray::Image;
 	use Microarray::File::Data_File;

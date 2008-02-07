@@ -36,3 +36,10 @@ Revision history for Perl extension Microarray.
 	- Microarray::File - fixed set_delimiter to ignore case of file extension
 	- Microarray::File::Data::Quantarray - will now guess the barcode from file name
 	- Microarray::File::Data::GenePix - various bug fixes to slide_barcode(), laser_power(), image_resolution() 
+0.4	Tue Feb 5 12:00:00 2008
+	- Changed Microarray::Feature to Microarray::Reporter
+	- Numerous changes to use new namespace
+	- This version imcompatible with previous versions
+0.41	Wed Feb 6 12:00:00 2008
+	- Microarray - Removed spot pixel data from quality control
+	- Micrarray::File::Data::Bluefuse - added methods channel1_sat/channel2_sat

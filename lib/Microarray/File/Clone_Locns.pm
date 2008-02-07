@@ -3,7 +3,7 @@ package Microarray::File::Clone_Locns;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '1.6';
+our $VERSION = '1.7';
 
 require Microarray::File;
 
@@ -123,7 +123,7 @@ Microarray::File::Clone_Locns provides methods for retrieving data from a genomi
 
 =head1 METHODS
 
-Pass each of the methods a feature name to return the relevant value.
+Pass each of the methods a reporter name to return the relevant value.
 
 =over
 

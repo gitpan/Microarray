@@ -3,6 +3,7 @@ Makefile.PL
 MANIFEST
 README
 t/Microarray.t
+t/Microarray-Spot.t
 t/Microarray-File-GAL.t
 t/Microarray-File-Data.t
 t/Microarray-File-Data-BlueFuse.t
@@ -10,7 +11,7 @@ t/Microarray-File-Data-Quantarray.t
 lib/Microarray.pm
 lib/Microarray/Analysis.pm
 lib/Microarray/Analysis/CGH.pm
-lib/Microarray/Feature.pm
+lib/Microarray/Reporter.pm
 lib/Microarray/File.pm
 lib/Microarray/Image.pm
 lib/Microarray/Spot.pm

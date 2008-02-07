@@ -5,10 +5,10 @@ use strict;
 use warnings;
 use Exporter;
 our @ISA = qw( Exporter );
-our $VERSION = '0.33';
+our $VERSION = '0.41';
 
 require Microarray::File;
-use Microarray::Feature;
+use Microarray::Reporter;
 use Microarray::Spot;
 require Microarray::File::Data;
 require Microarray::File::Data::Quantarray;
@@ -132,14 +132,14 @@ use Microarray::Image;
 	}
 			
 	##############################
-	# Microarray feature methods #
+	# Microarray reporter methods #
 	##############################
 	
-	# set features scrolls through the spot data
-	# and fills a feature object with all corresponding spot objects
-	sub set_features {
+	# set reporters scrolls through the spot data
+	# and fills a reporter object with all corresponding spot objects
+	sub set_reporters {
 		my $self = shift;
-		$self->{ _features } = { };
+		$self->{ _reporters } = { };
 		my $blank_feature 	= $self->blank_feature;	# missing samples
 		my $data_file 		= $self->data_file;
 		$data_file->set_spot_objects;
@@ -149,78 +149,78 @@ use Microarray::Image;
 			next SPOT unless $oSpot;
 			next SPOT unless ($oSpot->feature_id);
 			next SPOT if ($oSpot->feature_id =~ /$blank_feature/i);
-			$self->add_spot_to_feature($oSpot);
+			$self->add_spot_to_reporter($oSpot);
 		}
 	}
-	# uses the spot feature_id to determine the array feature_id
-	sub add_spot_to_feature {
+	# uses the spot feature_id to determine the array reporter_id
+	sub add_spot_to_reporter {
 		my $self = shift;
 		my $oSpot = shift;
-		if (my $oFeature = $self->get_feature($oSpot->feature_id)) {	# i.e. feature already defined
-			$oFeature->add_feature_spot($oSpot);
-		} else {	# create a new feature containing this spot
-			my $oFeature = array_feature->new($oSpot->feature_id);
-			$oFeature->add_feature_spot($oSpot);
-			$self->add_feature($oFeature);
+		if (my $oReporter = $self->get_reporter($oSpot->feature_id)) {	# i.e. reporter already defined
+			$oReporter->add_reporter_spot($oSpot);
+		} else {	# create a new reporter containing this spot
+			my $oReporter = array_reporter->new($oSpot->feature_id);
+			$oReporter->add_reporter_spot($oSpot);
+			$self->add_reporter($oReporter);
 		}
 	}
-	sub add_feature {
+	sub add_reporter {
 		my $self = shift;
-		my $oFeature = shift;
-		my $hFeatures = $self->get_all_features;
-		$hFeatures->{ $oFeature->feature_id } = $oFeature;
+		my $oReporter = shift;
+		my $hReporters = $self->get_all_reporters;
+		$hReporters->{ $oReporter->reporter_id } = $oReporter;
 	}
-	sub get_feature {
+	sub get_reporter {
 		my $self = shift;
-		my $feature_id = shift;
-		my $hFeatures = $self->get_all_features;
-		return unless (defined $hFeatures->{ $feature_id });
-		$hFeatures->{ $feature_id };
+		my $reporter_id = shift;
+		my $hReporters = $self->get_all_reporters;
+		return unless (defined $hReporters->{ $reporter_id });
+		$hReporters->{ $reporter_id };
 	}
-	# returns a hash of features; key=feature_id, value=feature object
-	sub get_all_features {
+	# returns a hash of reporters; key=reporter_id, value=reporter object
+	sub get_all_reporters {
 		my $self = shift;
-		unless (defined $self->{ _features }){
-			$self->set_feature_data;
+		unless (defined $self->{ _reporters }){
+			$self->set_reporter_data;
 		}
-		$self->{ _features };
+		$self->{ _reporters };
 	}
-	# returns an arrayref of spot objects for a given feature_id
-	sub get_feature_spots {
+	# returns an arrayref of spot objects for a given reporter_id
+	sub get_reporter_spots {
 		my $self = shift;
-		my $oFeature = $self->get_feature(shift);
-		$oFeature->get_feature_spots;
+		my $oReporter = $self->get_reporter(shift);
+		$oReporter->get_reporter_spots;
 	}
-	# returns an array of all feature objects
-	sub get_feature_objects {
+	# returns an array of all reporter objects
+	sub get_reporter_objects {
 		my $self = shift;
-		my $hFeatures = $self->get_all_features;
-		my @aValues = values %$hFeatures;
+		my $hReporters = $self->get_all_reporters;
+		my @aValues = values %$hReporters;
 		return \@aValues;
 	}
-	# returns an array of all feature ids
-	sub get_feature_ids {
+	# returns an array of all reporter ids
+	sub get_reporter_ids {
 		my $self = shift;
-		my $hFeatures = $self->get_all_features;
-		my @aKeys = keys %$hFeatures;
+		my $hReporters = $self->get_all_reporters;
+		my @aKeys = keys %$hReporters;
 		return \@aKeys;
 	}	
-	sub set_feature_data {
+	sub set_reporter_data {
 		my $self = shift;
-		unless (defined $self->{ _features }){
-			$self->set_features;
+		unless (defined $self->{ _reporters }){
+			$self->set_reporters;
 		}
-		my $aFeatures = $self->get_feature_objects;
-		for my $oFeature (@$aFeatures) {
-			$self->sort_feature_data($oFeature);
-			#$self->set_genetic_data($oFeature);
+		my $aReporters = $self->get_reporter_objects;
+		for my $oReporter (@$aReporters) {
+			$self->sort_reporter_data($oReporter);
+			#$self->set_genetic_data($oReporter);
 		}
 	}
-	sub sort_feature_data {
+	sub sort_reporter_data {
 		my $self = shift;
-		my $oFeature = shift;
+		my $oReporter = shift;
 
-		my $aSpots = $oFeature->get_feature_spots;
+		my $aSpots = $oReporter->get_reporter_spots;
 		
 		# setting these variables now saves making many calls to the same methods!
 		my $hBad_Flags 	= $self->data_file->bad_flags;
@@ -231,8 +231,8 @@ use Microarray::Image;
 		my $signal_quality = $self->signal_quality;
 		my $min_diameter = $self->min_diameter;
 		my $max_diameter = $self->max_diameter;
-		my $max_pixels = $self->max_pixels;
-		my $min_pixels = $self->min_pixels;
+#		my $max_pixels = $self->max_pixels;
+#		my $min_pixels = $self->min_pixels;
 
 		SPOT: for my $oSpot (@$aSpots) {
 		
@@ -264,19 +264,19 @@ use Microarray::Image;
 			# spot passes quality assessment
 
 			$oSpot->spot_status(1);
-			$oFeature->good_spot; 
+			$oReporter->good_spot; 
 			# for calculation of modal signal ratios
 			$self->all_ch1($oSpot->channel1_signal);
 			$self->all_ch2($oSpot->channel2_signal);
 			# for calculation of feature signal ratios
-			$oFeature->all_ch1($oSpot->channel1_signal);
-			$oFeature->all_ch2($oSpot->channel2_signal);
+			$oReporter->all_ch1($oSpot->channel1_signal);
+			$oReporter->all_ch2($oSpot->channel2_signal);
 			# for some plots
 			$self->x_pos($oSpot->x_pos);
 			$self->y_pos($oSpot->y_pos);
 			unless ($oSpot->channel2_signal == 0){
 				$self->all_ratios(($oSpot->channel1_signal)/($oSpot->channel2_signal));
-				$oFeature->all_ratios(($oSpot->channel1_signal)/($oSpot->channel2_signal));
+				$oReporter->all_ratios(($oSpot->channel1_signal)/($oSpot->channel2_signal));
 			}
 		}
 	}
@@ -461,7 +461,7 @@ use Microarray::Image;
 	sub default_min_snr {
 		10;
 	}
-	# subjective assessment of signal quality, using (% signal > B + 2SD)
+	# subjective assessment of signal quality, using (% signal > B + 2SD) or bluefuse's confidence value
 	sub signal_quality {
 		my $self = shift;
 		if (@_) {
@@ -704,7 +704,7 @@ Microarray - A Perl module for creating and manipulating microarray objects
 	use Microarray;
 
 	my $oArray = microarray->new($barcode,$data_file);
-	$oArray->set_feature_data;
+	$oArray->set_reporter_data;
 
 =head1 DESCRIPTION
 
@@ -712,13 +712,13 @@ Microarray is a suite of object oriented Perl Modules for the analysis of microa
 
 =head2 How it works
 
-The Microarray object contains several levels of microarray associated data, organised in a (fairly) intuitive way. First, there's the data that you have obtained from a microarray scanner, in the form of a data file. This is imported into Microrray as a L<Data_File|Microarray::File::Data> object. Support for different data file formats is built into the L<Data_File|Microarray::File::Data> class, and creating new classes for your favourite scanner/software output is relatively simple. Data extracted from the microarray spots are then imported into individual L<array_spot|Microarray::Spot> objects. Next, replicate spots are collated into L<array_feature|Microarray::Feature> objects. Most of the quality control functions operating on parameters such as signal intensity and spot size, are built into this final process, so that an L<array_feature|Microarray::Feature> object only contains data from spots that have passed the QC assessments. 
+The Microarray object contains several levels of microarray associated data, organised in a (fairly) intuitive way. First, there's the data that you have obtained from a microarray scanner, in the form of a data file. This is imported into Microrray as a L<Data_File|Microarray::File::Data> object. Support for different data file formats is built into the L<Data_File|Microarray::File::Data> class, and creating new classes for your favourite scanner/software output is relatively simple. Data extracted from the microarray spots are then imported into individual L<array_spot|Microarray::Spot> objects. Next, replicate spots are collated into L<array_reporter|Microarray::Reporter> objects. Most of the quality control functions operating on parameters such as signal intensity and spot size, are built into this final process, so that an L<array_reporter|Microarray::Reporter> object only contains data from spots that have passed the QC assessments. 
 
 =head1 METHODS
 
 =head2 Creating microarray objects
 
-The microarray object is created by providing a barcode (or name) and a data file. It is assumed the data file contains minimal information about the feature identities (i.e. name or id). In the case of a CGH-microarray, that means the BAC clone name/synonym at each spot. For cDNA or oligo arrays, that would mean a gene name, cDNA accession, or oligo name. Most of the functions between initialising the objects and returning formatted data can be accessed, and default settings can be changed (see below).
+The microarray object is created by providing a barcode (or name) and a data file. It is assumed the data file contains minimal information about the reporter identities (i.e. name or id). In the case of a CGH-microarray, that means the BAC clone name/synonym at each spot. For cDNA or oligo arrays, that would mean a gene name, cDNA accession, or oligo name. Most of the functions between initialising the objects and returning formatted data can be accessed, and default settings can be changed (see below).
 
 =head2 Data File
 
@@ -750,7 +750,7 @@ Set to 'y' if the feature id is prefixed in some way (for instance, we use prefi
 
 There are many parameters that are used in the process of defining features, and for their quality control. Below is an overview of the methods used. As well as being able to set these parameters individually, you can also set a number in one call using the set_param() method
 
-	$array->set_param(min_diameter=>100,min_snr=>10);
+	$oArray->set_param(min_diameter=>100,min_snr=>10);
 
 =head3 Spot Quality Control
 
@@ -780,7 +780,7 @@ The method percen_sat() refers to the percentage of spot pixels that have a satu
 
 =back
 
-=head3 Feature Analysis
+=head3 Reporter Analysis
 
 =over
 
@@ -792,9 +792,9 @@ Set to either 'y' or 'n', to include ratio normalisation. Note: this is only bas
 
 =head2 Access to Spot Data
 
-All of the microarray data can be independently accessed in one of two ways. First, data can be obtained directly from the data file object, and in fact you could use this module just to simplify the data input process for your own applications and not use any of the other functions of Microarray. Individual spot objects can be returned by referring to their spot index (which is usually also the order they appear in the data file) or all spot objects can be returned as a list. See L<Microarray::Spot|Microarray::Spot> and L<Microarray::Feature|Microarray::Feature> for more information.
+All of the microarray data can be independently accessed in one of two ways. First, data can be obtained directly from the data file object, and in fact you could use this module just to simplify the data input process for your own applications and not use any of the other functions of Microarray. Individual spot objects can be returned by referring to their spot index (which is usually also the order they appear in the data file) or all spot objects can be returned as a list. See L<Microarray::Spot|Microarray::Spot> and L<Microarray::Reporter|Microarray::Reporter> for more information.
 
-	my $spot = $oData_File->get_spots(1);
+	my $oSpot = $oData_File->get_spots(1);
 	my $aAll_Spots = $oData_File->get_spots;
 
 =head3 Data file methods
@@ -811,14 +811,14 @@ For example in the ScanArray format, the data header contains information about 
 
 =back
 
-=head2 Access to Feature Data
+=head2 Access to Reporter Data
 
-Alternatively you can access the feature data, which collates replicate spot data. Either, individual feature objects can be returned, and array_feature methods applied to them, or all feature objects/ids can be returned as a list. 
+Alternatively you can access the reporter data, which collates replicate spot data. Either, individual reporter objects can be returned, and array_reporter methods applied to them, or all reporter objects/ids can be returned as a list. 
 
-	$oFeature = $oArray->get_feature('feature1');  # returns a single feature object
-	$aFeature_Objects = $oArray->get_feature_objects;  # returns a list of feature objects
-	$aFeature_Names = $oArray->get_feature_ids;  # returns a list of feature ids
-	$hFeatures = $oArray->get_all_features;  # returns a hash of features; key=feature_id, value=feature object
+	$oReporter = $oArray->get_reporter('reporter1');  # returns a single reporter object
+	$aReporter_Objects = $oArray->get_reporter_objects;  # returns a list of reporter objects
+	$aReporter_Names = $oArray->get_reporter_ids;  # returns a list of reporter ids
+	$hReporters = $oArray->get_all_reporters;  # returns a hash of reporters; key=reporter_id, value=reporter object
 
 =head1 FUTURE DEVELOPMENT
 
@@ -826,7 +826,7 @@ This module is under continued development for our laboratory's microarray facil
 
 =head1 SEE ALSO
 
-L<Microarray::File|Microarray::File>, L<Microarray::Feature|Microarray::Feature>, L<Microarray::Spot|Microarray::Spot>
+L<Microarray::File|Microarray::File>, L<Microarray::Reporter|Microarray::Reporter>, L<Microarray::Spot|Microarray::Spot>
 
 =head1 AUTHOR
 

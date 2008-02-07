@@ -4,7 +4,7 @@ use 5.006;
 use strict;
 use warnings;
 
-our $VERSION = '1.2';
+our $VERSION = '1.3';
 
 use Microarray::Analysis;
 
@@ -47,35 +47,35 @@ use Microarray::Analysis;
 		my $self = shift;
 		$self->{ _flip_flop } = 1;
 	}
-	sub feature_chrs {
+	sub reporter_chrs {
 		my $self = shift;
-		$self->{ _feature_chrs };
+		$self->{ _reporter_chrs };
 	}
-	sub get_feature_data {
+	sub get_reporter_data {
 		my $self = shift;
-		my $feature = shift;
-		my $hFeatures = $self->features;
-		unless (defined $hFeatures->{ $feature }){
-			$hFeatures->{ $feature } = { ratios => [] };
+		my $reporter = shift;
+		my $hReporters = $self->reporters;
+		unless (defined $hReporters->{ $reporter }){
+			$hReporters->{ $reporter } = { ratios => [] };
 		}
-		$hFeatures->{ $feature };
+		$hReporters->{ $reporter };
 	}
-	sub set_feature_data {
+	sub set_reporter_data {
 		my $self = shift;
-		my $hFeature_data = $self->get_feature_data(shift);	
-		my $aRatios = $hFeature_data->{ ratios };
+		my $hReporter_data = $self->get_reporter_data(shift);	
+		my $aRatios = $hReporter_data->{ ratios };
 		push(@$aRatios,shift);
-		$hFeature_data->{ locn } = shift;
+		$hReporter_data->{ locn } = shift;
 	}
-	sub feature_locn {
+	sub reporter_locn {
 		my $self = shift;
-		my $hFeature = $self->get_feature_data(shift,shift);	# second shift for genome plot - chromosome name
-		return $hFeature->{locn};
+		my $hReporter = $self->get_reporter_data(shift,shift);	# second shift for genome plot - chromosome name
+		return $hReporter->{locn};
 	}
-	sub feature_log {
+	sub reporter_log {
 		my $self = shift;
-		my $hFeature = $self->get_feature_data(shift,shift);	# second shift for genome plot - chromosome name
-		my $aFeat_Ratios = $hFeature->{ratios};
+		my $hReporter = $self->get_reporter_data(shift,shift);	# second shift for genome plot - chromosome name
+		my $aFeat_Ratios = $hReporter->{ratios};
 		if (@$aFeat_Ratios == 1){
 			return $aFeat_Ratios->[0];
 		} else {
@@ -309,7 +309,7 @@ use Microarray::Analysis;
 					my ($chr,$locn) = $self->parse_embedded_locn($embedded_locn);
 					next unless ($plot_chr eq $chr);
 					if (my $log = $oData_File->log2_ratio($i)){
-						$self->set_feature_data($oData_File->synonym_id($i),$log,$locn);
+						$self->set_reporter_data($oData_File->synonym_id($i),$log,$locn);
 					}
 				}
 			}	
@@ -320,7 +320,7 @@ use Microarray::Analysis;
 				next unless (	(defined $$hClones{$feature}) && 
 								($plot_chr eq $$hClones{$feature}{_chr}) );
 				if (my $log = $oData_File->log2_ratio($i)){
-					$self->set_feature_data($feature,$log,$oClone_Positions->location($feature));
+					$self->set_reporter_data($feature,$log,$oClone_Positions->location($feature));
 				}
 			}
 		} else {
@@ -330,25 +330,25 @@ use Microarray::Analysis;
 	}
 	sub order_data {
 		my $self = shift;
-		my $hFeatures = $self->features;
-		my @aFeatures = keys %$hFeatures;
-		my $aSorted_Features = [];
+		my $hReporters = $self->reporters;
+		my @aReporters = keys %$hReporters;
+		my $aSorted_Reporters = [];
 		if ($self->smoothing){
-			@$aSorted_Features = sort { $$hFeatures{ $a }{locn} <=> $$hFeatures{ $b }{locn} } @aFeatures;
+			@$aSorted_Reporters = sort { $$hReporters{ $a }{locn} <=> $$hReporters{ $b }{locn} } @aReporters;
 		} else {
-			$aSorted_Features = \@aFeatures;
+			$aSorted_Reporters = \@aReporters;
 		}
 		my @aLog_Ratios = ();
 		my @aLocns = ();
 		
-		for my $feature (@$aSorted_Features){
-			push(@aLocns,$self->feature_locn($feature));
-			push(@aLog_Ratios,$self->feature_log($feature));
+		for my $reporter (@$aSorted_Reporters){
+			push(@aLocns,$self->reporter_locn($reporter));
+			push(@aLog_Ratios,$self->reporter_log($reporter));
 		}
 
 		$self->{ _x_values } = [\@aLocns];
 		$self->{ _y_values } = [\@aLog_Ratios];
-		$self->{ _feature_names } = [$aSorted_Features];
+		$self->{ _reporter_names } = [$aSorted_Reporters];
 	}
 }
 
@@ -362,14 +362,14 @@ use Microarray::Analysis;
 		die "Microarray::Analysis::CGH ERROR: No data object provided\n" unless $oData_File;
 
 		$oData_File->flip if ($self->flip_flop == -1);
-		$self->{ _features } = {};	# reset the features for this chromosome
+		$self->{ _reporters } = {};	# reset the reporters for this chromosome
 		my $spot_count = $oData_File->spot_count;
 		if ($self->embedded_locns){
 			for (my $i=0; $i<$spot_count; $i++){
 				if (my $embedded_locn = $oData_File->feature_id($i)){
 					my ($chr,$locn) = $self->parse_embedded_locn($embedded_locn);
 					if (my $log = $oData_File->log2_ratio($i)){
-						$self->set_feature_data($oData_File->synonym_id($i),$log,$locn,$chr);
+						$self->set_reporter_data($oData_File->synonym_id($i),$log,$locn,$chr);
 					}
 				}
 			}	
@@ -379,7 +379,7 @@ use Microarray::Analysis;
 				my $feature = $oData_File->feature_id($i);
 				next unless (defined $$hClones{$feature});
 				if (my $log = $oData_File->log2_ratio($i)){
-					$self->set_feature_data($feature,$log,$oClone_Positions->location($feature),$$hClones{$feature}{_chr});
+					$self->set_reporter_data($feature,$log,$oClone_Positions->location($feature),$$hClones{$feature}{_chr});
 				}
 			}
 		} else {
@@ -389,51 +389,51 @@ use Microarray::Analysis;
 	}
 	sub order_genome_data {
 		my $self = shift;
-		my $hFeatures = $self->features;
-		my (@aFeatures,@aLocns,@aLog_Ratios);
+		my $hReporters = $self->reporters;
+		my (@aReporters,@aLocns,@aLog_Ratios);
 
 		for my $chr ((1..22,'X','Y')){
 		
-			my $hChr_Features = $hFeatures->{ $chr };
-			my @aChr_Features = keys %$hChr_Features;
+			my $hChr_Reporters = $hReporters->{ $chr };
+			my @aChr_Reporters = keys %$hChr_Reporters;
 			
-			my $aSorted_Chr_Features = [];
+			my $aSorted_Chr_Reporters = [];
 			my $aSorted_Chr_Logs = [];
 			my $aSorted_Chr_Locns = [];
 			
 			if ($self->smoothing){
-				@$aSorted_Chr_Features = sort { $$hChr_Features{ $a }{locn} <=> $$hChr_Features{ $b }{locn} } @aChr_Features;
+				@$aSorted_Chr_Reporters = sort { $$hChr_Reporters{ $a }{locn} <=> $$hChr_Reporters{ $b }{locn} } @aChr_Reporters;
 			} else {
-				$aSorted_Chr_Features = \@aChr_Features;
+				$aSorted_Chr_Reporters = \@aChr_Reporters;
 			}
-			for my $feature (@$aSorted_Chr_Features){
-				push(@$aSorted_Chr_Locns,$$hChr_Features{$feature}{ locn });
-				push(@$aSorted_Chr_Logs,$self->feature_log($feature,$chr));
+			for my $reporter (@$aSorted_Chr_Reporters){
+				push(@$aSorted_Chr_Locns,$$hChr_Reporters{$reporter}{ locn });
+				push(@$aSorted_Chr_Logs,$self->reporter_log($reporter,$chr));
 			}
-			push (@aFeatures,$aSorted_Chr_Features);
+			push (@aReporters,$aSorted_Chr_Reporters);
 			push (@aLocns,$aSorted_Chr_Locns);
 			push (@aLog_Ratios,$aSorted_Chr_Logs);
 		}
 		$self->{ _x_values } = \@aLocns;
 		$self->{ _y_values } = \@aLog_Ratios;
-		$self->{ _feature_names } = \@aFeatures;
+		$self->{ _reporter_names } = \@aReporters;
 	}
-	sub set_feature_data {
+	sub set_reporter_data {
 		my $self = shift;
-		my $hFeature_data = $self->get_feature_data(shift,pop);	# pop chromosome name
-		my $aRatios = $hFeature_data->{ ratios };
+		my $hReporter_data = $self->get_reporter_data(shift,pop);	# pop chromosome name
+		my $aRatios = $hReporter_data->{ ratios };
 		push(@$aRatios,shift);
-		$hFeature_data->{ locn } = shift;
+		$hReporter_data->{ locn } = shift;
 	}
-	sub get_feature_data {
+	sub get_reporter_data {
 		my $self = shift;
-		my $feature = shift;
+		my $reporter = shift;
 		my $chr = shift;
-		my $hFeatures = $self->features;
-		unless (defined $hFeatures->{ $chr }{ $feature }){
-			$hFeatures->{ $chr }{ $feature } = { ratios => [] };
+		my $hReporters = $self->reporters;
+		unless (defined $hReporters->{ $chr }{ $reporter }){
+			$hReporters->{ $chr }{ $reporter } = { ratios => [] };
 		}
-		$hFeatures->{ $chr }{ $feature };
+		$hReporters->{ $chr }{ $reporter };
 	}
 }
 1;
@@ -453,7 +453,7 @@ Microarray::Analysis::CGH - A Perl module for analysing CGH microarray data
 
 =head1 DESCRIPTION
 
-Microarray::Analysis::CGH is an object-oriented Perl module for analysing CGH microarray data from a scan data file, for sorting the features in a single chromosome or whole genome context, and to apply smoothing.    
+Microarray::Analysis::CGH is an object-oriented Perl module for analysing CGH microarray data from a scan data file, for sorting the reporters in a single chromosome or whole genome context, and to apply smoothing.    
 
 =head1 METHODS
 
@@ -471,7 +471,7 @@ Set this parameter to 1 in order to invert the log ratios returned by the L<C<da
 
 =item B<has_embedded_locns>
 
-By setting the C<has_embedded_locns> parameter to 1, the module expects the feature name to be in the 'ID' field of the data file (i.e. the C<synonym_id()> of the C<data_file> object) and the clone location to be present in the 'Name' field of the data file (i.e. the C<feature_id()> of the L<C<data_file>|Microarray::File::Data_File> object). The clone location should be of the notation 'chr1:12345..67890'. When using C<has_embedded_locns> a clone position file is not required. Disabled by default.
+By setting the C<has_embedded_locns> parameter to 1, the module expects the reporter name to be in the 'ID' field of the data file (i.e. the C<synonym_id()> of the C<data_file> object) and the clone location to be present in the 'Name' field of the data file (i.e. the C<feature_id()> of the L<C<data_file>|Microarray::File::Data_File> object). The clone location should be of the notation 'chr1:12345..67890'. When using C<has_embedded_locns> a clone position file is not required. Disabled by default.
 
 =item B<clone_locns_file>
 

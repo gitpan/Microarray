@@ -1,16 +1,16 @@
-package Microarray::Feature;
+package Microarray::Reporter;
 
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '1.13';
+our $VERSION = '1.2';
 
 require Microarray;
 
-# an array_feature contains a number of spot objects
-# the feature objects are identified by a biologically relevant id
-# the feature summarises the averaged spot data
-{ package array_feature;
+# an array_reporter contains a number of spot objects
+# the reporter objects are identified by a biologically relevant id
+# the reporter summarises the averaged spot data
+{ package array_reporter;
 
 	sub new {
 		my $class = shift;
@@ -18,7 +18,7 @@ require Microarray;
 		bless $self, $class;
 		return $self;
 	}
-	sub get_feature_ratios {
+	sub get_reporter_ratios {
 		my $self = shift;
 		my $hAnalysed_Data = { };
 		$hAnalysed_Data->{ M_mean_of_ratios } = $self->mean_log_ratios;
@@ -28,30 +28,30 @@ require Microarray;
 		return $hAnalysed_Data;
 	}	
 	# genetic_data() will set some relevant value(s)
-	# usually, a sub-class such as bac_feature or gene_feature 
+	# usually, a sub-class such as bac_reporter or gene_reporter 
 	# will have its own methods for getting and setting the genetic data
 	sub genetic_data {
 		my $self = shift;
 		@_	?	$self->{ _genetic_data } = shift
 			:	$self->{ _genetic_data };
 	}
-	# feature_id() will be an alias for the genetic feature id
-	sub feature_id {
+	# reporter_id() will be an alias for the genetic reporter id
+	sub reporter_id {
 		my $self = shift;
 		$self->{ _id };
 	}
-	sub add_feature_spot {
+	sub add_reporter_spot {
 		my $self = shift;
-		my $aSpots = $self->get_feature_spots;
+		my $aSpots = $self->get_reporter_spots;
 		push (@$aSpots, shift);	
 	}
-	sub get_feature_spots {
+	sub get_reporter_spots {
 		my $self = shift;
 		$self->{ _spots };
 	}
-	sub get_feature_replicates {
+	sub get_reporter_replicates {
 		my $self = shift;
-		my $aSpots = $self->get_feature_spots;
+		my $aSpots = $self->get_reporter_spots;
 		if (@$aSpots){
 			my $replicates = @$aSpots;
 			return $replicates;
@@ -169,46 +169,46 @@ __END__
 
 =head1 NAME
 
-Microarray::Feature - A Perl module for creating and manipulating microarray feature objects
+Microarray::Reporter - A Perl module for creating and manipulating microarray reporter objects
 
 =head1 SYNOPSIS
 
 	use Microarray;
 
-	my $feature = array_feature->new('feature 1');
-	$feature->add_feature_spot($spot);
+	my $reporter = array_reporter->new('reporter 1');
+	$reporter->add_reporter_spot($spot);
 
 =head1 DESCRIPTION
 
-Microarray::Feature is an object-oriented Perl module for creating and manipulating microarray feature objects. It serves as a container into which you place spot objects that are replicates of the same genetic feature, and returns average information about those spots. 
+Microarray::Reporter is an object-oriented Perl module for creating and manipulating microarray reporter objects. It serves as a container into which you place spot objects that are replicates of the same genetic reporter, and returns average information about those spots. 
 
 =head1 METHODS
 
 =over
 
-=item B<feature_id>
+=item B<reporter_id>
 
-Name of the feature
+Name of the reporter
 
 =item B<genetic_data>
 
 An object containing relevant genetic data. 
 
-=item B<get_feature_spots>
+=item B<get_reporter_spots>
 
-Returns a list of spot objects attributed to a feature
+Returns a list of spot objects attributed to a reporter
 
-=item B<get_feature_replicates>
+=item B<get_reporter_replicates>
 
-Returns the number of spots attributed to a feature
+Returns the number of spots attributed to a reporter
 
 =item B<spots_passed_qc>
 
-Returns the number of spots that passed QC criteria and are included in the feature data
+Returns the number of spots that passed QC criteria and are included in the reporter data
 
 =item B<mean_ch1> and B<mean_ch2>
 
-Mean signal of all spots representing a feature
+Mean signal of all spots representing a reporter
 
 =item B<mean_ratios> and B<mean_log_ratios>
 

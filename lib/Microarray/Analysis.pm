@@ -4,7 +4,7 @@ use 5.006;
 use strict;
 use warnings;
 
-our $VERSION = '1.2';
+our $VERSION = '1.3';
 
 { package analysis;
 
@@ -53,16 +53,16 @@ our $VERSION = '1.2';
 		my $self = shift;
 		$self->{ _data };
 	}
-	sub features {
+	sub reporters {
 		my $self = shift;
-		unless (defined $self->{ _features }){
-			$self->{ _features } = {};
+		unless (defined $self->{ _reporters }){
+			$self->{ _reporters } = {};
 		}
-		$self->{ _features };
+		$self->{ _reporters };
 	}
-	sub feature_names {
+	sub reporter_names {
 		my $self = shift;
-		$self->{ _feature_names };
+		$self->{ _reporter_names };
 	}
 }
 

@@ -3,7 +3,7 @@ package Microarray::Spot;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '1.12';
+our $VERSION = '1.14';
 
 require Microarray;
 
@@ -339,7 +339,7 @@ Indicates whether the spot was rejected by QC criteria (0=failed, 1=passed)
 
 =head1 SEE ALSO
 
-L<Microarray|Microarray>, L<Microarray::Feature|Microarray::Feature>, L<Microarray::File|Microarray::File>, L<Microarray::File::Data|Microarray::File::Data>
+L<Microarray|Microarray>, L<Microarray::Reporter|Microarray::Reporter>, L<Microarray::File|Microarray::File>, L<Microarray::File::Data|Microarray::File::Data>
 
 =head1 AUTHOR
 

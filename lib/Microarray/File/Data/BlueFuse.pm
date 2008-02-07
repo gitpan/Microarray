@@ -3,7 +3,7 @@ package Microarray::File::Data::BlueFuse;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '1.17';
+our $VERSION = '1.18';
 
 
 
@@ -318,6 +318,25 @@ our $VERSION = '1.17';
 	sub channel2_signal {
 		my $self = shift;
 		$self->return_data(shift,$self->get_column_id('AMPCH2'));
+	}
+	# bluefuse doesn't return a % sat value, 
+	# and actually can return a signal value higher than 65536
+	# if signal > 65536, we'll call that channel 100% saturated
+	sub channel1_sat {
+		my $self = shift;
+		if ($self->channel1_signal(shift) > 65536){
+			return 100;
+		} else {
+			return;
+		}
+	}
+	sub channel2_sat {
+		my $self = shift;
+		if ($self->channel2_signal(shift) > 65536){
+			return 100;
+		} else {
+			return;
+		}
 	}
 	sub ch1_median_b {
 		1

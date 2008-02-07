@@ -3,7 +3,7 @@ package Microarray::File::Data;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '2.17';
+our $VERSION = '2.18';
 
 require Microarray::File;
 require Microarray::File::Data::Quantarray;
@@ -313,7 +313,7 @@ If you know the type of data file you are dealing with, then you should use the 
 
 =head3 Spot object creation
 
-The module can create individual L<Microarray::Spot|Microarray::Spot> objects for you, either on-mass, or individually as you want them. The overhead for doing this is not huge, so if you have replicates that you want to handle using the L<Microarray::Feature|Microarray::Feature> module, this is a handy way to fill the Feature container. 
+The module can create individual L<Microarray::Spot|Microarray::Spot> objects for you, either on-mass, or individually as you want them. The overhead for doing this is not huge, so if you have replicates that you want to handle using the L<Microarray::Reporter|Microarray::Reporter> module, this is a handy way to fill the reporter container. 
 
 	$oFile->spot_object(123);				# sets and gets object for spot index 123
 
