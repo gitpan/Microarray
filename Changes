@@ -43,3 +43,5 @@ Revision history for Perl extension Microarray.
 0.41	Wed Feb 6 12:00:00 2008
 	- Microarray - Removed spot pixel data from quality control
 	- Micrarray::File::Data::Bluefuse - added methods channel1_sat/channel2_sat
+0.42	Fri Feb 8 16:00:00 2008
+	- Perldoc update

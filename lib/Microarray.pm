@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Exporter;
 our @ISA = qw( Exporter );
-our $VERSION = '0.41';
+our $VERSION = '0.42';
 
 require Microarray::File;
 use Microarray::Reporter;
@@ -697,7 +697,7 @@ __END__
 
 =head1 NAME
 
-Microarray - A Perl module for creating and manipulating microarray objects
+Microarray - A Perl module for creating and manipulating DNA Microarray experiment objects
 
 =head1 SYNOPSIS
 
@@ -708,11 +708,63 @@ Microarray - A Perl module for creating and manipulating microarray objects
 
 =head1 DESCRIPTION
 
-Microarray is a suite of object oriented Perl Modules for the analysis of microarray experiment data. These include modules for handling common formats of microarray files, modules for the programmatic abstraction of a microarray experiment, and for the output of a variety of images describing microarray experiment data. 
+=begin html
+
+<style type="text/css">	
+	.thumb {
+		margin-bottom: 0.5em;
+		border-style: solid;
+		border-color: white;
+		width: auto;
+		overflow: hidden;
+	}
+	.tright {
+		float: right;
+		clear: right;
+		border-width: 0.5em 0 0.8em 1.4em;
+	}
+	.thumbinner {
+		border: 1px solid #ccc;
+		padding: 3px !important;
+		background-color: #f9f9f9;
+		font-size: 94%;
+		text-align: center;
+		overflow: hidden;
+	}
+	.thumbimage {
+		border: 1px solid #ccc;
+	}
+	.thumbcaption {
+		border: none;
+		text-align: left;
+		line-height: 1.4em;
+		padding: 3px !important;
+		font-size: 90%;
+		font-style: italic;
+	}
+</style>
+<div class="thumb tright">
+	<div class="thumbinner" style="width:352px;">
+		<img src="http://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Microarray2.gif/350px-Microarray2.gif" width="350" height="213" class="thumbimage" alt="Example of an approximately 40,000 probe spotted oligo microarray with enlarged inset to show detail">
+		<div class="thumbcaption">
+			Example of an approximately 40,000 probe spotted oligo microarray with enlarged inset to show detail
+		</div>
+	</div>
+</div>
+
+=end html
+
+DNA Microarrays (L<http://en.wikipedia.org/wiki/Dna_microarray>) also known as 'Gene Chips' or 'DNA chips', are an experimental tool used in genetic research and other related disciplines. They consist of thousands of DNA probes immobilised on a solid surface (such as a glass slide) and enable high-resolution, high-throughput analyses of a variety of parameters such as gene expression, genetic variation, or chromosome copy number variants. 
+
+=head2 Typically
+
+A single Microarray experiment (typically) generates large quantities of data which (typically) requires some form of post-processing before the data can be interpreted or visualised. The processing of microarray data is (typically) handled by a Bioinformatician (L<http://en.wikipedia.org/wiki/Bioinformatics>), and the favourite computer programming language of a Bioinformatician is (typically) Perl. However, until now the poor Bioinformatician has (typically) had to use a statistical programming language like R (L<http://www.r-project.org>) - not because it is intrinsically better for the job than Perl, but rather because there were no CPAN modules that helped the Bioinformatician to perform these tasks lazily, impatiently and with hubris. 
+
+Microarray is a suite of object-oriented Perl Modules for the analysis of microarray experiment data. These include modules for handling common formats of microarray files, modules for the programmatic abstraction of a microarray experiment, and for the output of a variety of images describing microarray experiment data. Hopefully, this suite of modules will help Bioinformaticians to (typically) handle their data with laziness, impatience and hubris. 
 
 =head2 How it works
 
-The Microarray object contains several levels of microarray associated data, organised in a (fairly) intuitive way. First, there's the data that you have obtained from a microarray scanner, in the form of a data file. This is imported into Microrray as a L<Data_File|Microarray::File::Data> object. Support for different data file formats is built into the L<Data_File|Microarray::File::Data> class, and creating new classes for your favourite scanner/software output is relatively simple. Data extracted from the microarray spots are then imported into individual L<array_spot|Microarray::Spot> objects. Next, replicate spots are collated into L<array_reporter|Microarray::Reporter> objects. Most of the quality control functions operating on parameters such as signal intensity and spot size, are built into this final process, so that an L<array_reporter|Microarray::Reporter> object only contains data from spots that have passed the QC assessments. 
+The Microarray object contains several levels of microarray associated data, organised in a (fairly) intuitive way. First, there's the data that you have obtained from a microarray scanner, in the form of a data file. This is imported into Microrray as a L<Data_File|Microarray::File::Data> object. Support for different data file formats is built into the L<Data_File|Microarray::File::Data> class, and creating new classes for your favourite scanner/software output is relatively simple. Data extracted from the microarray spots are then imported into individual L<array_spot|Microarray::Spot> objects. Next, replicate spots are collated into L<array_reporter|Microarray::Reporter> objects. Most of the quality control functions operating on parameters such as signal intensity and spot size, are built into this final process, so that an L<array_reporter|Microarray::Reporter> object only contains data from spots that have passed the QC assessments. Post-processing of the data is then performed using the L<Microarray::Analysis|Microarray::Analysis> module, and finally the data are visualised using the L<Microarray::Image|Microarray::Image> module. 
 
 =head1 METHODS
 
