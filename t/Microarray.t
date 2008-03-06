@@ -3,7 +3,7 @@
 use strict;
 
 use FindBin;
-use Test::More tests=>21;
+use Test::More tests=>23;
 use Test::Group;
 use Test::Differences;
 use Test::Deep;
@@ -15,6 +15,8 @@ BEGIN {
 	use_ok('Microarray::Analysis');
 	use_ok('Microarray::Analysis::CGH');
 	use_ok('Microarray::Image');
+	use_ok('Microarray::Image::CGH_Plot');
+	use_ok('Microarray::Image::QC_Plots');
 	use_ok('Microarray::File');
 	use_ok('Microarray::File::Image');
 	use_ok('Microarray::File::Clone_Locns');

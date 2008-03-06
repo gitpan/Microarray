@@ -3,7 +3,7 @@ package Microarray::File::Data::Quantarray;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '2.17';
+our $VERSION = '2.18';
 
 
 
@@ -66,6 +66,9 @@ our $VERSION = '2.17';
 			} 
 		}
 		$self->{ _header_info } = $hHeader_Info;
+	}
+	sub delimiter {
+		return ",";
 	}
 	sub pixel_size {
 		my $self = shift;

@@ -3,11 +3,13 @@ package Microarray::File::Data;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '2.18';
+our $VERSION = '2.20';
 
 require Microarray::File;
 require Microarray::File::Data::Quantarray;
 require Microarray::File::Data::BlueFuse;
+require Microarray::File::Data::Agilent;
+require Microarray::File::Data::GenePix;
 require Microarray::Spot;
 
 { package data_file;
@@ -48,6 +50,8 @@ require Microarray::Spot;
 			return 'quantarray_file';
 		} elsif ($source =~ /genepix/i){
 			return 'genepix_file';
+		} elsif ($source =~ /agilent/i){
+			return 'agilent_file';
 		} else {
 			warn "Microarray::File::Data ERROR: Could not deduce the type of file from '".$self->file_name."'\n";
 			return;
@@ -69,6 +73,12 @@ require Microarray::Spot;
 		$self->set_data_fields(shift @$aaData);	# method in class delimited_file
 		$self->{ _spot_data } = $aaData;		# all the numbers
 		$self->{ _spot_count } = scalar @$aaData;
+	}
+	# not anything to do with the above, but instead is the data 
+	# sorted on any specific field other than spot_index - 
+	# used to discriminate processed_data from other data
+	sub comes_sorted {
+		return;
 	}
 	# the size of the data array after removing data fields
 	# for the number of spot OBJECTS created, use number_spots()

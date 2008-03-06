@@ -24,4 +24,5 @@ lib/Microarray/File/Data/BlueFuse.pm
 lib/Microarray/File/Data/GenePix.pm
 lib/Microarray/File/Data/Manor_Output.pm
 lib/Microarray/File/Data/Quantarray.pm
-
+lib/Microarray/Image/QC_Plots.pm
+lib/Microarray/Image/CGH_Plot.pm

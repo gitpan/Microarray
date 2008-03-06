@@ -45,3 +45,9 @@ Revision history for Perl extension Microarray.
 	- Micrarray::File::Data::Bluefuse - added methods channel1_sat/channel2_sat
 0.42	Fri Feb 8 16:00:00 2008
 	- Perldoc update
+0.43	Thu Mar 6 12:52:00 2008
+	- Split Microarray::Image into Microarray::Image, Microarray::Image::QC_Plots and Microarray::Image::CGH_Plot
+	- Fixed bugs in Microarray::File::Data::Agilent
+	- All Microarray::File::Data:: classes now set their delimiter
+	- Various changes to Microarray::Analysis::CGH and Microarray::Image::CGH_Plot, implementing handling of CGHcall and DNAcopy data
+	- Many other minor changes and Perldoc updates

@@ -3,7 +3,7 @@ package Microarray::File::Data::GenePix;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '1.15';
+our $VERSION = '1.16';
 
 
 { package genepix_file;
@@ -43,6 +43,9 @@ our $VERSION = '1.15';
 			}
 		}
 		$self->{ _header_info } = $hHeader_Info;
+	}
+	sub delimiter {
+		return "\t";
 	}
 	sub pixel_size {
 		my $self = shift;

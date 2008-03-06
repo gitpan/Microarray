@@ -1,4 +1,4 @@
-Microarray version 0.42
+Microarray version 0.43
 =======================
 
 Microarray is a suite of object oriented Perl Modules for the handling and analysis of microarray experiment data. These include modules for handling common formats of microarray files, modules for the programmatic abstraction of a microarray experiment, and for the output of a variety of images describing microarray experiment data. 
@@ -35,7 +35,7 @@ The test scripts accompanying the modules require the following modules and libr
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2007 by Christopher Jones
+Copyright (C) 2008 by Christopher Jones
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself

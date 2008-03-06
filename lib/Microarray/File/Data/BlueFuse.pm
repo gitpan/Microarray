@@ -3,13 +3,33 @@ package Microarray::File::Data::BlueFuse;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '1.18';
+our $VERSION = '1.21';
+
+require Microarray::File::Data;
 
 
+{ package bluefuse_post_file;
+
+	our @ISA = qw( bluefuse_file );
+
+	# should include methods for getting/setting extra header info at some point
+	# for now, this class simply deals with the lack of some values in post files
+
+	sub man_excl {
+		return "no";
+	}
+	sub auto_excl {
+		return "no";
+	}
+	sub spot_index {
+		my $self = shift;
+		my $index = shift;
+		return ($index + 1);
+	}
+	
+}
 
 { package bluefuse_file;
-
-	require Microarray::File::Data;
 
 	our @ISA = qw( data_file );
 
@@ -76,6 +96,9 @@ our $VERSION = '1.18';
 			}	
 		}
 		$self->{ _header_info } = $hHeader_Info;
+	}
+	sub delimiter {
+		return "\t";
 	}
 	
 	### header info getters ###

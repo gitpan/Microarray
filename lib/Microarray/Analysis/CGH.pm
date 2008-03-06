@@ -4,7 +4,7 @@ use 5.006;
 use strict;
 use warnings;
 
-our $VERSION = '1.3';
+our $VERSION = '1.5';
 
 use Microarray::Analysis;
 
@@ -16,19 +16,66 @@ use Microarray::Analysis;
 		my $class = shift;
 		my $self  = { };
 		bless $self, $class;
-		if (@_){
-			$self->data_object(shift);
-			if (@_){
-				$self->clone_locns_file(shift);
-			}
+		while (my $oData = shift){
+			$self->data_object($oData) if ($oData->isa('data_file') || $oData->isa('processed_data'));
+			$self->clone_locns_file($oData) if $oData->isa('clone_locn_file');
+			$self->cgh_call_object($oData) if $oData->cgh_call_data;
 		} 
 		return $self;
 	}
 	sub set_data {
 		my $self = shift;
-		$self->data_object(shift);
-		if (@_){
-			$self->clone_locns_file(shift);
+		while (my $oData = shift){
+			$self->data_object($oData) if ($oData->isa('data_file') || $oData->isa('processed_data'));
+			$self->clone_locns_file($oData) if $oData->isa('clone_locn_file');
+			$self->cgh_call_object($oData) if $oData->cgh_call_data;
+		} 
+	}
+	sub cgh_call_data {
+		$ENV{ CGH_CALL_DATA };
+	}
+	sub cgh_call_object {
+		my $self = shift;
+		@_	?	$self->{ _cgh_call_object } = shift
+			:	$self->{ _cgh_call_object };
+	}
+	# pass a feature_id to return its call value
+	sub cgh_call {
+		my $self = shift;
+		if ($self->cgh_call_data){
+			my $oCGH_Call = $self->cgh_call_object;
+			return $oCGH_Call->cgh_call(shift);
+		} else {
+			return;
+		}
+	}
+	# pass a feature_id to return its segment level
+	sub seg_level {
+		my $self = shift;
+		if ($self->cgh_call_data){
+			my $oCGH_Call = $self->cgh_call_object;
+			return $oCGH_Call->seg_level(shift);
+		} else {
+			return;
+		}
+	}
+	# the call data in chromosome chunks
+	sub chr_cgh_calls {
+		my $self = shift;
+		if ($self->cgh_call_data){
+			my $oCGH_Call = $self->cgh_call_object;
+			return $oCGH_Call->chr_cgh_calls;
+		} else {
+			return;
+		}
+	}
+	sub chr_seg_levels {
+		my $self = shift;
+		if ($self->cgh_call_data){
+			my $oCGH_Call = $self->cgh_call_object;
+			return $oCGH_Call->chr_seg_levels;
+		} else {
+			return;
 		}
 	}
 	sub flip_flop {
@@ -60,6 +107,7 @@ use Microarray::Analysis;
 		}
 		$hReporters->{ $reporter };
 	}
+	# pass reporter,log2,locn
 	sub set_reporter_data {
 		my $self = shift;
 		my $hReporter_data = $self->get_reporter_data(shift);	
@@ -167,12 +215,14 @@ use Microarray::Analysis;
 		# all of the sorted data
 		my $aAll_Locns 		= $self->x_values;
 		my $aAll_Logs 		= $self->y_values;
+		my $aAll_CGH_Calls 	= $self->z_values;	# returns null if no CGHcall/DNAcopy data
 
 		$self->starting_data($aAll_Locns,$aAll_Logs);
 
 		# arrays to hold the final smoothed data
 		my @aAll_Smooth_Locns 	= ();
 		my @aAll_Smooth_Logs 	= ();
+		my @aAll_Smooth_Calls 	= ();
 
 		# set the chromosome we are working with - single or whole genome?
 		my @aPlot_Chromosomes;
@@ -186,33 +236,40 @@ use Microarray::Analysis;
 		for (my $j=0; $j<@aPlot_Chromosomes; $j++){
 		
 			# ...and get the sorted data for this chromosome
-			my $alocns 	= $aAll_Locns->[$j];
-			my $alogs 	= $aAll_Logs->[$j];
-			
+			my $aLocns 		= $aAll_Locns->[$j];
+			my $aLogs 		= $aAll_Logs->[$j];
+			my $aCGH_Calls 	= $aAll_CGH_Calls->[$j] if ($aAll_CGH_Calls && @$aAll_CGH_Calls);
+
 			# reset the window start and end location
-			my $start = $alocns->[0];
+			my $start = $aLocns->[0];
 			my $end = $start + $window;
 			
 			# arrays to hold the smoothed data for this chromosome
 			my @aSmooth_Chr_Locns 	= ();
 			my @aSmooth_Chr_Logs 	= ();
+			my @aSmooth_Chr_Calls 	= ();
 			
 			#Êarrays to hold data in the moving window
+			#Êmust be empty 'real' lists so that moving_average() works as expected
 			my @aWindow_Logs		= ();
 			my @aWindow_Locns		= ();
+			my @aWindow_Calls		= ();
 				
 			# scroll through the sorted data
-			for (my $i=0; $i<@$alocns; $i++){
-				my $genomic_locn = $alocns->[$i];
-				my $log_value    = $alogs->[$i]; 
+			for (my $i=0; $i<@$aLocns; $i++){
+				my $genomic_locn = $aLocns->[$i];
+				my $log_value = $aLogs->[$i]; 
+				my $cgh_call = $aCGH_Calls->[$i] if ($aCGH_Calls && @$aCGH_Calls);
 				
 				# are we past the end of the window?
 				if ($genomic_locn > $end){
 					# if so, average up what's in the window...
-					my ($av_locn, $av_log) = $self->moving_average(\@aWindow_Locns, \@aWindow_Logs);
+					#Êmust pass referenced 'real' lists here, so that moving average works as expected
+					my ($av_locn, $av_log, $av_call) = $self->moving_average(\@aWindow_Locns, \@aWindow_Logs, \@aWindow_Calls);
 					# ...add these values to the smoothed data arrays...
 					push(@aSmooth_Chr_Locns, $av_locn);
 					push(@aSmooth_Chr_Logs, $av_log);
+					push(@aSmooth_Chr_Calls, $av_call) if ($aCGH_Calls && @$aCGH_Calls);
 					# ...move the end of the window to include the next location...
 					while ($genomic_locn > $end){ 
 						$end = (int($genomic_locn/100000) * 100000) + $step;
@@ -222,6 +279,7 @@ use Microarray::Analysis;
 						while ((@aWindow_Locns) && ($aWindow_Locns[0] < $start)){		# get rid of any values now out of the region 
 							my $shifted1 = shift @aWindow_Locns;
 							my $shifted2 = shift @aWindow_Logs;
+							my $shifted3 = shift @aWindow_Calls if ($aCGH_Calls && @$aCGH_Calls);
 						}		
 					}
 				}
@@ -231,24 +289,26 @@ use Microarray::Analysis;
 				# so we add it to the window array and continue to the next location
 				push (@aWindow_Locns, $genomic_locn);
 				push (@aWindow_Logs, $log_value);
-			
+				push (@aWindow_Calls, $cgh_call) if ($aCGH_Calls && @$aCGH_Calls);
 			}
 			# we've finished with this chromosome, but have some values left in the last window
-			my ($av_locn, $av_log) = $self->moving_average(\@aWindow_Locns, \@aWindow_Logs);
+			my ($av_locn, $av_log, $av_call) = $self->moving_average(\@aWindow_Locns, \@aWindow_Logs, \@aWindow_Calls);
 			push(@aSmooth_Chr_Locns, $av_locn);
 			push(@aSmooth_Chr_Logs, $av_log);
+			push(@aSmooth_Chr_Calls, $av_call) if ($aCGH_Calls && @$aCGH_Calls);
 			
 			# add the smoothed data for this chromosome to our array
 			# and then continue to the next chromosome
 			push(@aAll_Smooth_Locns,\@aSmooth_Chr_Locns);
 			push(@aAll_Smooth_Logs,\@aSmooth_Chr_Logs);
+			push(@aAll_Smooth_Calls,\@aSmooth_Chr_Calls) if (@aSmooth_Chr_Calls);
 		}
 
 		# finally, set all the smoothed data to our plotting values
 		$self->{ _x_values } = \@aAll_Smooth_Locns;
 		$self->{ _y_values } = \@aAll_Smooth_Logs;
-		$self->{ _smoothed } = 1;
-	
+		$self->{ _z_values } = \@aAll_Smooth_Calls if (@aAll_Smooth_Calls);
+		$self->{ _smoothed } = 1;	
 	}
 	sub starting_data {
 		my $self = shift;
@@ -270,31 +330,51 @@ use Microarray::Analysis;
 			:	$self->{ _start_y_values };
 	}
 	sub moving_average {
+		use Statistics::Descriptive;
 		my $self = shift;
-		my $Locns = shift;
-		my $Logs  = shift;
-		my ($av_locn, $av_log2, $med_log2);
-		if (@$Locns > 1){
+		my $aLocns = shift;
+		my $aLogs  = shift;
+		my $aCalls = shift;
+		my ($av_locn, $av_log2, $av_call);
+		if (@$aLocns > 1){
 			my $locn_stat = Statistics::Descriptive::Full->new();
 			my $log_stat = Statistics::Descriptive::Full->new();
-			$log_stat->add_data($Logs); 
-			$locn_stat->add_data($Locns); 
+			my $call_stat = Statistics::Descriptive::Full->new() if ($aCalls && @$aCalls);
+			$log_stat->add_data($aLogs); 
+			$locn_stat->add_data($aLocns); 
+			$call_stat->add_data($aCalls) if ($aCalls && @$aCalls); 
 			$av_locn = $locn_stat->mean;
 			$av_log2 = $log_stat->mean;
-			$med_log2 = $log_stat->median;
-		} elsif (@$Locns == 1){
-			$av_locn = @$Locns[0];
-			$av_log2 = @$Logs[0];
+			if ($aCalls && @$aCalls){			
+				$av_call = $aCalls->[0] unless ($av_call = $call_stat->mode);
+			}
+		} elsif (@$aLocns == 1){
+			$av_locn = $aLocns->[0];
+			$av_log2 = $aLogs->[0];
+			$av_call = $aCalls->[0] if ($aCalls && @$aCalls);
 		}
-		return(int $av_locn, $med_log2);
+		return(int $av_locn, $av_log2, $av_call);
 	}
-
 }
 
 { package chromosome_cgh;
 
 	our @ISA = qw( cgh_analysis );
 
+	sub sort_genome_data {
+		my $self = shift;
+		$self->sort_chromosome_data;
+	}
+	sub all_cgh_smooth {
+		my $self = shift;
+		if ($self->cgh_call_data){
+			my $oCGH_Call = $self->cgh_call_object;
+			my $aahAll_CGH_Smooth = $oCGH_Call->all_cgh_smooth;
+			return $aahAll_CGH_Smooth->[0];
+		} else {
+			return;
+		}
+	}
 	sub sort_chromosome_data {
 		my $self = shift;
 		my $plot_chr = $self->plot_chromosome;
@@ -338,17 +418,19 @@ use Microarray::Analysis;
 		} else {
 			$aSorted_Reporters = \@aReporters;
 		}
+		my $call_data = $self->cgh_call_data;	#Êto save 32,000 calls later
 		my @aLog_Ratios = ();
 		my @aLocns = ();
-		
+		my @aZ_Values = ();
 		for my $reporter (@$aSorted_Reporters){
 			push(@aLocns,$self->reporter_locn($reporter));
 			push(@aLog_Ratios,$self->reporter_log($reporter));
+			push(@aZ_Values,$self->z_value($reporter)) if $call_data;
 		}
-
 		$self->{ _x_values } = [\@aLocns];
 		$self->{ _y_values } = [\@aLog_Ratios];
 		$self->{ _reporter_names } = [$aSorted_Reporters];
+		$self->{ _z_values } = [\@aZ_Values] if @aZ_Values;
 	}
 }
 
@@ -387,11 +469,20 @@ use Microarray::Analysis;
 		}
 		$self->order_genome_data;
 	}
+	sub all_cgh_smooth {
+		my $self = shift;
+		if (my $oCGH_Call = $self->cgh_call_object){
+			return $oCGH_Call->all_cgh_smooth;
+		} else {
+			return;
+		}
+	}
 	sub order_genome_data {
 		my $self = shift;
 		my $hReporters = $self->reporters;
-		my (@aReporters,@aLocns,@aLog_Ratios);
-
+		my (@aReporters,@aLocns,@aLog_Ratios,@aZ_Values);
+		my $call_data = $self->cgh_call_data;	#Êto save 32,000 calls later
+		
 		for my $chr ((1..22,'X','Y')){
 		
 			my $hChr_Reporters = $hReporters->{ $chr };
@@ -400,6 +491,7 @@ use Microarray::Analysis;
 			my $aSorted_Chr_Reporters = [];
 			my $aSorted_Chr_Logs = [];
 			my $aSorted_Chr_Locns = [];
+			my $aSorted_Chr_Zvals = [];
 			
 			if ($self->smoothing){
 				@$aSorted_Chr_Reporters = sort { $$hChr_Reporters{ $a }{locn} <=> $$hChr_Reporters{ $b }{locn} } @aChr_Reporters;
@@ -409,14 +501,17 @@ use Microarray::Analysis;
 			for my $reporter (@$aSorted_Chr_Reporters){
 				push(@$aSorted_Chr_Locns,$$hChr_Reporters{$reporter}{ locn });
 				push(@$aSorted_Chr_Logs,$self->reporter_log($reporter,$chr));
+				push(@$aSorted_Chr_Zvals,$self->z_value($reporter)) if $call_data;
 			}
 			push (@aReporters,$aSorted_Chr_Reporters);
 			push (@aLocns,$aSorted_Chr_Locns);
 			push (@aLog_Ratios,$aSorted_Chr_Logs);
+			push (@aZ_Values,$aSorted_Chr_Zvals) if @$aSorted_Chr_Zvals;
 		}
 		$self->{ _x_values } = \@aLocns;
 		$self->{ _y_values } = \@aLog_Ratios;
 		$self->{ _reporter_names } = \@aReporters;
+		$self->{ _z_values } = \@aZ_Values if @aZ_Values;
 	}
 	sub set_reporter_data {
 		my $self = shift;

@@ -5,7 +5,7 @@ use strict;
 use warnings;
 use Exporter;
 our @ISA = qw( Exporter );
-our $VERSION = '0.42';
+our $VERSION = '0.43';
 
 require Microarray::File;
 use Microarray::Reporter;
@@ -14,7 +14,7 @@ require Microarray::File::Data;
 require Microarray::File::Data::Quantarray;
 require Microarray::File::Data::GenePix;
 require Microarray::File::Data::BlueFuse;
-use Microarray::Image;
+use Microarray::Image::QC_Plots;
 
 { package microarray;
 
@@ -656,36 +656,56 @@ use Microarray::Image;
 		$oImage->{ _ch2_values } = $self->all_ch2;
 		$oImage->{ _x_coords } = $self->x_pos;
 		$oImage->{ _y_coords } = $self->y_pos;
+		$oImage->parse_args(@_);
 		$oImage->process_data;	# by-pass $oImage->set_data
+		
+# 		
+# ma/ri/scatter use _ch1_values/_ch2_values
+# heatmaps use ch1_values and x/y_coords
+# 
+# currently no support for direct plotting of cgh_plots
+#	$self->{ _x_values } = $oData_File->all_locns;
+# this is the problem - don't yet have genomic locations being returned directly
+# should make a Microarray::CGH object and add this function
+# but how to easily integrate database support?
+# what about have a database object, which would be ensembl by default, but which will handle LIMS database
+#	$self->{ _y_values } = $oData_File->all_log2_ratio;
+# $self->all_ratios;
+#	$self->{ _reporter_names } = $oData_File->all_feature_names;
+# $self->get_reporter_ids;
+#	$self->{ _cgh_calls } = $oData_File->cgh_calls if $oData_File->isa('cgh_call_output');
+# 
+# 
+# 		
 	}	
 	sub plot_ma {
 		my $self = shift;
 		my $oImage = ma_plot->new();
-		$self->set_image_data($oImage);
+		$self->set_image_data($oImage,@_);
 		$oImage->make_plot;
 	}
 	sub plot_ri {
 		my $self = shift;
 		my $oImage = ri_plot->new();
-		$self->set_image_data($oImage);
+		$self->set_image_data($oImage,@_);
 		$oImage->make_plot;
 	}
 	sub plot_intensity_scatter {
 		my $self = shift;
 		my $oImage = intensity_scatter->new();
-		$self->set_image_data($oImage);
+		$self->set_image_data($oImage,@_);
 		$oImage->make_plot;
 	}
 	sub plot_log2_heatmap {
 		my $self = shift;
 		my $oImage = log2_heatmap->new();
-		$self->set_image_data($oImage);
+		$self->set_image_data($oImage,@_);
 		$oImage->make_plot;
 	}
 	sub plot_intensity_heatmap {
 		my $self = shift;
 		my $oImage = intensity_heatmap->new();
-		$self->set_image_data($oImage);
+		$self->set_image_data($oImage,@_);
 		$oImage->make_plot;
 	}
 
@@ -871,6 +891,35 @@ Alternatively you can access the reporter data, which collates replicate spot da
 	$aReporter_Objects = $oArray->get_reporter_objects;  # returns a list of reporter objects
 	$aReporter_Names = $oArray->get_reporter_ids;  # returns a list of reporter ids
 	$hReporters = $oArray->get_all_reporters;  # returns a hash of reporters; key=reporter_id, value=reporter object
+
+=head2 Image Output
+
+Microarray will output QC/QA plots of the data as PNG files, using the L<Microarray::Image::QC_Plots|Microarray::Image::QC_Plots> module. Simply call any of the following methods to create the relevant plot, passing any plot parameters if required.
+
+	my $plot_png = $oArray->plot_ma(scale=>50);
+	open (PLOT,'>plot.png');
+	print PLOT $plot_png;
+	close PLOT;
+
+=over
+
+=item B<plot_ma>, B<plot_ri>
+
+Plots an MA/RI plot. (These are the same plot, just with different units).
+
+=item B<plot_intensity_scatter>
+
+A simple intensity scatter of channel1 signal vs channel2 signal.
+
+=item B<plot_log2_heatmap>
+
+A spatial plot of the log2 values from each spot of the array.
+
+=item B<plot_intensity_heatmap>
+
+A spatial plot of the signal intensity of each spot of the array.
+
+=back
 
 =head1 FUTURE DEVELOPMENT
 
