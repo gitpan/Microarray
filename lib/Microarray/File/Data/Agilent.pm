@@ -3,7 +3,7 @@ package Microarray::File::Data::Agilent;
 use 5.006;
 use strict;
 use warnings;
-our $VERSION = '1.11';
+our $VERSION = '2.0';
 
 
 { package agilent_file;
