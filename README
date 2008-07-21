@@ -1,9 +1,9 @@
-Microarray version 0.43
-=======================
+Microarray version 0.43d
+========================
 
 Microarray is a suite of object oriented Perl Modules for the handling and analysis of microarray experiment data. These include modules for handling common formats of microarray files, modules for the programmatic abstraction of a microarray experiment, and for the output of a variety of images describing microarray experiment data. 
 
-This distribution is not yet fully tested, and some packages are not fully implemented - specifically Microarray::File::Data::Agilent and Microarray::File::Data::Manor_Ouptput. 
+This distribution is not yet fully tested, and some packages are not fully implemented - specifically Microarray::File::Data::Manor_Ouptput.
 
 INSTALLATION
 

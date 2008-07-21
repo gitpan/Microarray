@@ -4,7 +4,7 @@ use 5.006;
 use strict;
 use warnings;
 
-our $VERSION = '1.5';
+our $VERSION = '1.7';
 
 use Microarray::Analysis;
 
@@ -270,12 +270,18 @@ use Microarray::Analysis;
 					push(@aSmooth_Chr_Locns, $av_locn);
 					push(@aSmooth_Chr_Logs, $av_log);
 					push(@aSmooth_Chr_Calls, $av_call) if ($aCGH_Calls && @$aCGH_Calls);
+
 					# ...move the end of the window to include the next location...
-					while ($genomic_locn > $end){ 
-						$end = (int($genomic_locn/100000) * 100000) + $step;
-						# ...move the start up as well...
-						$start = $end - $window;
-						# ...and remove any data that is no longer in the window
+					$end = (int($genomic_locn/100000) * 100000) + $step;
+					# ...move the start up as well...
+					$start = $end - $window;
+
+					# ...and remove any data that is no longer in the window
+					if ((@aWindow_Locns) && ($aWindow_Locns[-1] < $start)){
+						@aWindow_Locns = ();
+						@aWindow_Logs = ();
+						@aWindow_Calls = () if ($aCGH_Calls && @$aCGH_Calls);	
+					} else {
 						while ((@aWindow_Locns) && ($aWindow_Locns[0] < $start)){		# get rid of any values now out of the region 
 							my $shifted1 = shift @aWindow_Locns;
 							my $shifted2 = shift @aWindow_Logs;
@@ -330,30 +336,40 @@ use Microarray::Analysis;
 			:	$self->{ _start_y_values };
 	}
 	sub moving_average {
-		use Statistics::Descriptive;
 		my $self = shift;
-		my $aLocns = shift;
-		my $aLogs  = shift;
-		my $aCalls = shift;
+		my ($aLocns,$aLogs,$aCalls) = @_;
 		my ($av_locn, $av_log2, $av_call);
 		if (@$aLocns > 1){
-			my $locn_stat = Statistics::Descriptive::Full->new();
-			my $log_stat = Statistics::Descriptive::Full->new();
-			my $call_stat = Statistics::Descriptive::Full->new() if ($aCalls && @$aCalls);
-			$log_stat->add_data($aLogs); 
-			$locn_stat->add_data($aLocns); 
-			$call_stat->add_data($aCalls) if ($aCalls && @$aCalls); 
-			$av_locn = $locn_stat->mean;
-			$av_log2 = $log_stat->mean;
-			if ($aCalls && @$aCalls){			
-				$av_call = $aCalls->[0] unless ($av_call = $call_stat->mode);
-			}
+			$av_locn = calc_average($aLocns);
+			$av_log2 = calc_average($aLogs);
+			$av_call = calc_mode($aCalls) if ($aCalls && @$aCalls);
 		} elsif (@$aLocns == 1){
 			$av_locn = $aLocns->[0];
 			$av_log2 = $aLogs->[0];
 			$av_call = $aCalls->[0] if ($aCalls && @$aCalls);
 		}
 		return(int $av_locn, $av_log2, $av_call);
+	}
+	# the next two methods avoid using the horribly slow Statistics::Descriptive module 
+	sub calc_mode {	#Êor the first value, if no mode
+		my $aList = shift;
+		my %hFreq = ();
+		for my $num (@$aList){
+			$hFreq{$num}++;
+		}
+		my ($max_count,$most_common) = ($hFreq{$$aList[0]},$$aList[0]);
+		while (my ($num,$count) = each %hFreq){
+			$most_common = $num if ($count > $max_count);
+		}
+		return $most_common;
+	}
+	sub calc_average {
+		my $aList = shift;
+		my $total;
+		for my $val (@$aList){
+			$total += $val;
+		}
+		return ($total/scalar @$aList);
 	}
 }
 

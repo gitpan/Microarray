@@ -51,3 +51,7 @@ Revision history for Perl extension Microarray.
 	- All Microarray::File::Data:: classes now set their delimiter
 	- Various changes to Microarray::Analysis::CGH and Microarray::Image::CGH_Plot, implementing handling of CGHcall and DNAcopy data
 	- Many other minor changes and Perldoc updates
+0.43d   Mon July 21 11:29:00 2008
+	- Significant performance enhancements to CGH data smoothing (Microarray::Analysis::CGH) and plotting (Microarray::Image::CGH_Plot)
+	- Microarray::Image::CGH_Plot
+		- Added function to plot gene location

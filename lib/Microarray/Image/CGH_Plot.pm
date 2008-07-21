@@ -3,7 +3,7 @@ package Microarray::Image::CGH_Plot;
 use 5.008;
 use strict;
 use warnings;
-our $VERSION = '1.3';
+our $VERSION = '1.7';
 
 use Microarray::Image;
 require Microarray::File;
@@ -62,6 +62,13 @@ use Microarray::Analysis::CGH;
 			}
 		}
 	}
+	# this is a hashref of the x/y plot values
+	#Êused to avoid plotting the same values twice
+	sub plotted_values {
+		my $self = shift;
+		@_	?	$self->{ _plotted_values } = shift
+			:	$self->{ _plotted_values };
+	}
 	sub shift_zero {
 		my $self = shift;
 		@_	?	$self->{ _shift_zero } = shift
@@ -118,6 +125,42 @@ use Microarray::Analysis::CGH;
 	sub plot_segment_colours {
 		my $self = shift;
 		$self->{ _segment_colours };
+	}
+	sub plot_gene_locn {
+		my $self = shift;
+		if (@_){
+			unless (defined $self->{ _plot_gene_info }){
+				$self->{ _plot_gene_info } = {};
+			}
+			my %hGene_Info = @_;
+			my $hGene_Info = $self->{ _plot_gene_info };
+			%$hGene_Info = (%$hGene_Info, %hGene_Info);
+		} else {
+			$self->{ _plot_gene_info };
+		}
+	}
+	sub plot_gene_names {
+		my $self = shift;
+		my $hGene_Info = $self->{ _plot_gene_info };
+		return (keys %$hGene_Info);
+	}
+	sub plot_gene_chr {
+		my $self = shift;
+		my $gene = shift;
+		my $hGene_Info = $self->{ _plot_gene_info };
+		return $hGene_Info->{ $gene }{ chr };
+	}
+	sub plot_gene_start {
+		my $self = shift;
+		my $gene = shift;
+		my $hGene_Info = $self->{ _plot_gene_info };
+		return $hGene_Info->{ $gene }{ start };
+	}
+	sub plot_gene_end {
+		my $self = shift;
+		my $gene = shift;
+		my $hGene_Info = $self->{ _plot_gene_info };
+		return $hGene_Info->{ $gene }{ end };
 	}
 	# the call data (either CGHcall calls, or DNAcopy segments)
 	# the original chr chunks for either call or segment level data
@@ -189,7 +232,7 @@ use Microarray::Analysis::CGH;
 		my $scale 		= $self->scale;
 		my $y_scale 	= $self->y_scale;
 		my $zero_shift 	= $self->shift_zero;
-
+		
 		my $image = $self->gd_object;
 
 		for my $hSegment (@$ahCGH_Smooth){
@@ -203,7 +246,7 @@ use Microarray::Analysis::CGH;
 			$ratio += $zero_shift if ($zero_shift);
 			my $plot_log = int((225 - ($ratio * 150))*$y_scale);
 			my $colour = $self->get_call_colour($call); # call, or 'smoothed' call
-			$image->filledRectangle($plot_start,($plot_log-1),$plot_end,($plot_log+1),$colour)
+			$image->filledRectangle($plot_start,($plot_log-1),$plot_end,($plot_log+1),$colour);	
 		}
 	}
 	# normalise the processed data relative to the image ready to be plotted
@@ -222,24 +265,35 @@ use Microarray::Analysis::CGH;
 		my $aLocns = [];
 		my $aLog2  = [];
 		my $aCall_Data = [];
+		
+		my %hPlot_Values = ();
+
 		for (my $i=0; $i<@$aX; $i++ ){
 			my $locn = $aX->[$i];
 			my $log2 = $aY->[$i];
 			next unless($locn && $log2);
-			push(@$aLocns, int($locn/$scale));
+			
+			$locn = int($locn/$scale);
+			push(@$aLocns, $locn);
+			
 			my $call = $aZ->[$i] if ($aZ && @$aZ);
 			if ($zero_shift){
 				$log2 += $zero_shift;
 				$call += $zero_shift if ($aZ && @$aZ);	# can have null seg values
 			} 
 			## divide the y axis by 3 for a +1.5/-1.5 plot
-			push(@$aLog2, int((225 - ($log2 * 150))*$y_scale) );
+			$log2 = int((225 - ($log2 * 150))*$y_scale);
+			push(@$aLog2, $log2);
+			
 			$call = int((225 - ($call * 150))*$y_scale) if ($aZ && @$aZ);
 			push(@$aCall_Data, $call) if ($aaZ && @$aaZ); 
+			
+			$hPlot_Values{"$locn,$log2"}++;	# to avoid plotting the same values twice
 		}
 		$self->{ _plotx_values } = $aLocns;
 		$self->{ _ploty_values } = $aLog2;
 		$self->{ _plotz_values } = $aCall_Data if (@$aCall_Data && ($self->plot_call_colours || $self->plot_segment_colours));
+		$self->plotted_values(\%hPlot_Values);
 		return($aLocns,$aLog2);
 	}
 	sub plot_dimensions {
@@ -260,26 +314,47 @@ use Microarray::Analysis::CGH;
 		
 		return ($x,$y);
 	}
+	sub pixel_size {
+		my $self = shift;
+		if (defined $self->{ _pixel_size }){
+			return $self->{ _pixel_size };
+		} else {
+			return 3;
+		}
+	}
 	sub plot_spots {
 		my $self = shift;
-		my $image = $self->gd_object;
-		my ($aX,$aY) = $self->plot_data;
-
+		
+		my $image 			= $self->gd_object;
+		my ($aX,$aY) 		= $self->plot_data;
+		my $hPlot_Values 	= $self->plotted_values;
+		my $pixel_size 		= $self->pixel_size;
+		
 		my $aCGH_Colours = $self->plotz_values;
 		if (($self->plot_call_colours || $self->plot_segment_colours) && !$aCGH_Colours) {
 			warn "Microarray::Image::CGH_Plot Could not plot CGHcall or segment colours because there was no CGHcall/DNAcopy data available\n";
-		}		
+		}
+		
 		for (my $i=0; $i<@$aX; $i++){
 			my $x = $aX->[$i];
 			my $y = $aY->[$i];
 			next unless ($x && $y);
+			if (defined $hPlot_Values->{"$x,$y"}){
+				delete $hPlot_Values->{"$x,$y"};	# only plot once, then throw away
+			} else {
+				next;	# no point plotting the same values twice
+			}
 			my $colour;
 			if ($aCGH_Colours && @$aCGH_Colours){
 				$colour = $self->get_colour($aCGH_Colours->[$i]); # call, or 'smoothed' call
 			} else {
 				$colour = $self->get_colour($y);
 			}
-			$image->filledEllipse($x,$y,3,3,$colour);
+			if ($pixel_size == 1){
+				$image->setPixel($x,$y,$colour);
+			} else {
+				$image->filledEllipse($x,$y,3,3,$colour);
+			}
 		}
 	}
 	# plot the outline of the diagram, ready for spots to be added
@@ -289,30 +364,52 @@ use Microarray::Analysis::CGH;
 		my $x = shift;
 		my $y = shift;
 
-		my $image = $self->gd_object;
-		my $scale = $self->scale;
+		my $image 	= $self->gd_object;
+		my $scale 	= $self->scale;
 		my $y_scale = $self->y_scale;
-		my $chr = $self->plot_chromosome;
+		my $chr 	= $self->plot_chromosome;
+		
 		# get colours from the GD colour table 
 		my $black 	= $image->colorExact(0,0,0);
 		my $red   	= $image->colorExact(255,0,0);      
 		my $green 	= $image->colorExact(0,255,0);      
-		my $blue	= $image->colorExact(125,125,255);   
+
+		# plot a gene location, if required
+		if ($self->plot_gene_locn){		
+			my @aGenes = $self->plot_gene_names;
+			for my $gene_name (@aGenes){
+				next unless ($self->plot_gene_chr($gene_name) eq $chr);
+				my $gene_start = int($self->plot_gene_start($gene_name)/$scale);
+				my $gene_end = int($self->plot_gene_end($gene_name)/$scale);
+				my $name_length = ((length($gene_name))*6);	# pixel length of gene_name
+				my $royal_blue	= $image->colorExact(51,0,255);   
+				$image->filledRectangle($gene_start,0,$gene_end,$y,$royal_blue);
+				my $name_start = $gene_end + 5;
+				# make sure the name is withing the plot boundary
+				if (($name_start + $name_length) > $x){
+					$name_start = $gene_start - $name_length - 5;
+				} 
+				$image->string($image->gdSmallFont,$name_start,($y-15),$gene_name,$royal_blue);
+			}
+		}
+
 		# 3px wide log2 ratio lines
-		$image->filledRectangle(0,(150*$y_scale),$x,(150*$y_scale),$red);		# +0.5
+		$image->filledRectangle(0,(150*$y_scale),$x,(150*$y_scale),$red);	# +0.5
 		$image->filledRectangle(0,(225*$y_scale),$x,(225*$y_scale),$green);	#  0.0
-		$image->filledRectangle(0,(300*$y_scale),$x,(300*$y_scale),$red);		# -0.5
-		# axis labels
+		$image->filledRectangle(0,(300*$y_scale),$x,(300*$y_scale),$red);	# -0.5
+		# axis labels		
 		$image->string($image->gdGiantFont,10,(150*$y_scale),'0.5',$black);
 		$image->string($image->gdGiantFont,10,(225*$y_scale),'0',$black);
 		$image->string($image->gdGiantFont,10,(300*$y_scale),'-0.5',$black);
 		
 		if ($self->plot_centromere){
+			my $blue = $image->colorExact(125,125,255);
 			# dashed style for centromere lines
 			$image->setStyle($blue,$blue,$blue,$blue,gdTransparent,gdTransparent);
 			my $cen = int($self->chr_centromere($chr)/$scale);
 			$image->line($cen,0,$cen,$y,gdStyled);
 		}
+		
 	}
 	# set a rainbow of graduated colours in the GD colour table, for use in the plot 
 	sub set_plot_background {
@@ -325,16 +422,17 @@ use Microarray::Analysis::CGH;
 		my $self  = shift;
 		my $image = $self->gd_object;
 		$image->colorAllocate(0,0,0);
-		$image->colorAllocate(125,125,255);
+		$image->colorAllocate(125,125,255);	# centromere blue
 		
 		for (my $i = 0; $i<=255; $i+=3){ 
 			$image->colorAllocate($i,255,0);	## Add red -> green = yellow
 			$image->colorAllocate(255,$i,0); 	## Add green -> red = yellow
 		}	
-		$image->colorAllocate(150,150,0);
-		$image->colorAllocate(0,150,0);
-		$image->colorAllocate(150,0,0);
-		$image->colorAllocate(0,0,150);
+		$image->colorAllocate(150,150,0);	# dull yellow
+		$image->colorAllocate(0,150,0);		# dull green
+		$image->colorAllocate(150,0,0);		# dull red
+		$image->colorAllocate(0,0,150);		# dull blue
+		$image->colorAllocate(51,0,255);	# royal blue
 	}
 	# the colour of the segment level (average) line
 	# uses the CGHcall value
@@ -534,6 +632,21 @@ use Microarray::Analysis::CGH;
 		my $default_scale = $self->default_scale;
 		return $default_scale/$scale;
 	}
+	sub mini_plot {
+		my $self = shift;
+		$self->scale(10000000);
+		$self->{ _pixel_size } = 1;
+	}
+	sub font_size {
+		my $self = shift;
+		if ($self->scale <= 2000000 ){
+			return 'gdGiantFont';
+		} elsif ($self->scale < 3000000 ){
+			return 'gdSmallFont';
+		} else {
+			return 'gdTinyFont';
+		}
+	}
 	sub plot_chromosome {
 		return;
 	}
@@ -544,7 +657,8 @@ use Microarray::Analysis::CGH;
 		my $scale 		= $self->scale;
 		my $y_scale 	= $self->y_scale;
 		my $zero_shift 	= $self->shift_zero;
-
+		my $pixel_size	= $self->pixel_size;
+		
 		my $image = $self->gd_object;
 
 		for my $chr ((0..23)){
@@ -561,7 +675,11 @@ use Microarray::Analysis::CGH;
 				$ratio += $zero_shift if ($zero_shift);
 				my $plot_log = int((225 - ($ratio * 150))*$y_scale);
 				my $colour = $self->get_call_colour($call); # call, or 'smoothed' call
-				$image->filledRectangle($plot_start,($plot_log-1),$plot_end,($plot_log+1),$colour)
+				if ($pixel_size == 1){
+					$image->line($plot_start,$plot_log,$plot_end,$plot_log,$colour);
+				} else {
+					$image->filledRectangle($plot_start,($plot_log-1),$plot_end,($plot_log+1),$colour);
+				}
 			}
 		}
 	}
@@ -577,6 +695,7 @@ use Microarray::Analysis::CGH;
 		my $aLocns = [];
 		my $aLog2  = [];
 		my $aCall_Data = [];
+		my %hPlot_Values = ();
 		
 		for my $chr ((0..23)){
 			my $aX = $$aaX[$chr];
@@ -587,21 +706,30 @@ use Microarray::Analysis::CGH;
 				my $locn = $aX->[$i];
 				my $log2 = $aY->[$i];			
 				next unless($locn && $log2);
-				push(@$aLocns, int(($locn/$scale) + ($chr_offset/$scale) + 25));
+				
+				$locn = int(($locn/$scale) + ($chr_offset/$scale) + 25);
+				push(@$aLocns, $locn);
+				
 				my $call = $aZ->[$i] if ($aZ && @$aZ);
 				if ($zero_shift){
 					$log2 += $zero_shift;
 					$call += $zero_shift if ($aZ && @$aZ);	# can have null seg values
 				}
+				
 				## multiply the log value by a quarter of the y axis to get a +2/-2 plot 
-				push(@$aLog2, int((225 - ($log2 * 150))*$y_scale) );
+				$log2 = int((225 - ($log2 * 150))*$y_scale);
+				push(@$aLog2, $log2);
+				
 				$call = int((225 - ($call * 150))*$y_scale) if ($aZ && @$aZ);
 				push(@$aCall_Data, $call) if ($aaZ && @$aaZ);
+
+				$hPlot_Values{"$locn,$log2"}++;	# to avoid plotting the same values twice
 			}
 		}
 		$self->{ _plotx_values } = $aLocns;
 		$self->{ _ploty_values } = $aLog2;
 		$self->{ _plotz_values } = $aCall_Data if (@$aCall_Data && ($self->plot_call_colours || $self->plot_segment_colours));
+		$self->plotted_values(\%hPlot_Values);
 		return($aLocns,$aLog2);
 	}
 	# Harcode the plot outline for the genome plot as dimensions do not change
@@ -613,20 +741,23 @@ use Microarray::Analysis::CGH;
 		my $image = $self->gd_object;
 		my $scale = $self->scale;
 		my $y_scale = $self->y_scale;
+		my $font = $self->font_size;
+		
 		# get colours from the GD colour table 
 		my $black 	= $image->colorExact(0,0,0);
 		my $red   	= $image->colorExact(255,0,0);      
 		my $green 	= $image->colorExact(0,255,0); 
 		my $blue	= $image->colorExact(125,125,255);   
+		my $royal_blue	= $image->colorExact(51,0,255);   
+		
 		# 3px wide log2 ratio lines
 		$image->filledRectangle(0,(150*$y_scale),$x,(150*$y_scale),$red);		# +0.5
 		$image->filledRectangle(0,(225*$y_scale),$x,(225*$y_scale),$green);		#  0.0
 		$image->filledRectangle(0,(300*$y_scale),$x,(300*$y_scale),$red);		# -0.5
 		# axis labels
-		$image->string($image->gdSmallFont,0,(150*$y_scale),'0.5',$black);
-		$image->string($image->gdSmallFont,0,(225*$y_scale),'0',$black);
-		$image->string($image->gdSmallFont,0,(300*$y_scale),'-0.5',$black);
-		# dashed style for centromere lines
+		$image->string($image->$font,0,(150*$y_scale),'0.5',$black);
+		$image->string($image->$font,0,(225*$y_scale),'0',$black);
+		$image->string($image->$font,0,(300*$y_scale),'-0.5',$black);
 		$image->setStyle($blue,$blue,$blue,$blue,gdTransparent,gdTransparent);
 		
 		# plot chr separator lines and chr names for each chromosome
@@ -637,6 +768,7 @@ use Microarray::Analysis::CGH;
 			if ($self->plot_centromere){
 				# centromere
 				my $cen = int(($self->chr_offset($chr)+$self->chr_centromere($chr))/$scale);
+				# dashed style for centromere lines
 				$image->line($cen+25,0,$cen+25,(450*$y_scale),gdStyled);
 			}
 			# chr buffer
@@ -653,7 +785,18 @@ use Microarray::Analysis::CGH;
 				$chr_name = $chr;
 			}
 			# print chr name at bottom of plot
-			$image->string($image->gdSmallFont,$middle+20,(425*$y_scale),$chr_name,$black);
+			$image->string($image->$font,$middle+20,(420*$y_scale),$chr_name,$black);
+
+			if ($self->plot_gene_locn){
+				my @aGenes = $self->plot_gene_names;
+				for my $gene_name (@aGenes){
+					next unless ($self->plot_gene_chr($gene_name) eq $chr_name);
+					my $gene_start = int(($self->chr_offset($chr) + $self->plot_gene_start($gene_name))/$scale);
+					my $gene_end = int(($self->chr_offset($chr) + $self->plot_gene_end($gene_name))/$scale);
+					# dashed style for gene line
+					$image->filledRectangle($gene_start+25,0,$gene_end+25,(450*$y_scale),$royal_blue);
+				}
+			}
 		}
 	}
 	sub chr_offset {
@@ -765,6 +908,16 @@ Pass an integer value to set the desired X-scale of the plot, in bp/pixel. Defau
 =item B<shift_zero>
 
 Set this parameter to a value by which all Log2 ratios will be adjusted. Useful to better align the plot with the zero line. 
+
+=item B<plot_gene_location>
+
+Pass details of gene locations to be plotted as a 2D hash, like so;
+
+	$oPlot->plot_gene_location( 
+		'BRCA1' => { chr => '17', start => '38449840', end=> '38530994' },
+		'BRCA2' => { chr => '13', start => '31787617', end => '31871806' },
+		'CBL' => { chr => '11', start => '118582200', end => '118684066' } 
+	);
 
 =back
 
