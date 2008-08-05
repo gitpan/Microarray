@@ -3,41 +3,34 @@
 use strict;
 
 use FindBin;
-use Test::More tests=>23;
+use Test::More tests=>13;
 use Test::Group;
 use Test::Differences;
 use Test::Deep;
+use Test::Image::GD;
 
+#1,2
 BEGIN {
 	use_ok('Microarray');
-	use_ok('Microarray::Spot');
-	use_ok('Microarray::Reporter');
-	use_ok('Microarray::Analysis');
-	use_ok('Microarray::Analysis::CGH');
-	use_ok('Microarray::Image');
-	use_ok('Microarray::Image::CGH_Plot');
-	use_ok('Microarray::Image::QC_Plots');
-	use_ok('Microarray::File');
-	use_ok('Microarray::File::Image');
-	use_ok('Microarray::File::Clone_Locns');
-	use_ok('Microarray::File::Data::GenePix');
-	use_ok('Microarray::File::Data::Agilent');
-	use_ok('Microarray::File::Data::Manor_Output');
+	use_ok('Microarray::File::Data');
 }
 
 my ($oArray,$oReporter,$oReporter1,$oReporter2,$oReporter3,$oReporter4,$oReporter5,$aReporter_Objects,$aReporter_Names,$hReporters,$file,$aSpots);
 
-$file = $FindBin::Bin.'/../test_files/quantarray.csv';
-begin_skipping_tests "The test-file 'quantarray.csv' could not be found" unless (-e $file);  
+my $directory = $FindBin::Bin;
 
+$file = $directory.'/../test_files/quantarray.csv';
+begin_skipping_tests "The test-file 'quantarray.csv' could not be found" unless (-s $file);  # skip to end
+
+#3
 test "Object creation" => sub {
 	ok($oArray = microarray->new('10001',$file),'object creation');
 	isa_ok($oArray,'microarray','microarray object');
 	$oArray->set_param(min_snr=>2,high_signal=>65000,low_signal=>500,signal_quality=>50);
 };
 
-
-test "getting and setting params for spot quality assessment criteria" => sub {
+#4
+test "Getting and setting params for spot quality assessment criteria" => sub {
     is($oArray->low_signal,'500','low_signal');
     is($oArray->high_signal,'65000','high_signal');
     is($oArray->percen_sat,'10','percen_sat');
@@ -52,8 +45,8 @@ test "getting and setting params for spot quality assessment criteria" => sub {
     is($oArray->genetic_data_source,'data_file','genetic_data_source');
 };
 
-
-test "get reporter data" => sub {
+#5
+test "Get reporter data" => sub {
 	$oArray->set_reporter_data;
 	ok($oReporter = $oArray->get_reporter('RP13-827M24'),'get_reporter'); 
 	ok($aReporter_Objects = $oArray->get_reporter_objects,'get_reporter_objects'); 
@@ -62,7 +55,8 @@ test "get reporter data" => sub {
 	eq_or_diff $hReporters->{ 'RP13-827M24' }, $oReporter, "comparing reporter objects";
 };
 
-test "check reporter objects" => sub {
+#6
+test "Check reporter objects" => sub {
 	ok($oReporter = $oArray->get_reporter('RP13-827M24'),'get_reporter');  # returns a single reporter object
 	isa_ok($oReporter, 'array_reporter','get_reporter object');
 	ok($aReporter_Objects = $oArray->get_reporter_objects,'get_reporter_objects');  # returns a list of reporter objects
@@ -82,7 +76,8 @@ test "check reporter objects" => sub {
     }
 };
 
-test "CTD-2023C19" => sub {
+#7
+test "Reporter test; CTD-2023C19" => sub {
 	my $oCTD_2023C19;
     ok($oCTD_2023C19 = $oArray->get_reporter('CTD-2023C19'),'get_reporter CTD-2023C19');
 	cmp_ok($oCTD_2023C19->reporter_id,'eq','CTD-2023C19','reporter_id');
@@ -112,7 +107,9 @@ test "CTD-2023C19" => sub {
     cmp_ok($oSpot2->channel2_signal,'==',5796,'spot2 ch2 signal');
     cmp_ok($oSpot3->channel2_signal,'==',5601,'spot3 ch2 signal');
 };
-test "RP11-40I8" => sub {
+
+#8
+test "Reporter test; RP11-40I8" => sub {
 	my $oRP11_40I8;
     ok($oRP11_40I8 = $oArray->get_reporter('RP11-40I8'),'get_reporter RP11-40I8');
 	cmp_ok($oRP11_40I8->reporter_id,'eq','RP11-40I8','reporter_id');
@@ -120,7 +117,7 @@ test "RP11-40I8" => sub {
 	is($oRP11_40I8->spots_passed_qc,undef,'RP11-40I8 spots passed QC');
     cmp_ok($oRP11_40I8->mean_ch1,'==',0,'mean_ch1');
     cmp_ok($oRP11_40I8->mean_ch2,'==',0,'mean_ch2');
-    cmp_ok($oRP11_40I8->mean_ratios,'==',0,'mean_ratios');
+    is($oRP11_40I8->mean_ratios,undef,'mean_ratios');
     is($oRP11_40I8->ratio_means,undef,'ratio means');
 
     my $aSpots = $oRP11_40I8->get_reporter_spots;
@@ -142,7 +139,9 @@ test "RP11-40I8" => sub {
     cmp_ok($oSpot2->channel2_signal,'==',2362,'spot2 ch2 signal');
     cmp_ok($oSpot3->channel2_signal,'==',895,'spot3 ch2 signal');
 };
-test "RP11-558G22" => sub {
+
+#9
+test "Reporter test; RP11-558G22" => sub {
 	my $oRP11_558G22;
     ok($oRP11_558G22 = $oArray->get_reporter('RP11-558G22'),'get_reporter RP11-558G22');
 	cmp_ok($oRP11_558G22->reporter_id,'eq','RP11-558G22','reporter_id');
@@ -172,7 +171,9 @@ test "RP11-558G22" => sub {
     cmp_ok($oSpot2->channel2_signal,'==',10580,'spot2 ch2 signal');
     cmp_ok($oSpot3->channel2_signal,'==',11328,'spot3 ch2 signal');
 };
-test "RP11-622I2" => sub {
+
+#10
+test "Reporter test; RP11-622I2" => sub {
 	my $oRP11_622I2;
     ok($oRP11_622I2 = $oArray->get_reporter('RP11-622I2'),'get_reporter RP11-622I2');
 	cmp_ok($oRP11_622I2->reporter_id,'eq','RP11-622I2','reporter_id');
@@ -202,7 +203,9 @@ test "RP11-622I2" => sub {
     cmp_ok($oSpot2->channel2_signal,'==',15809,'spot2 ch2 signal');
     cmp_ok($oSpot3->channel2_signal,'==',4569,'spot3 ch2 signal');
 };
-test "RP11-753E17" => sub {
+
+#11
+test "Reporter test; RP11-753E17" => sub {
 	my $oRP11_753E179;
     ok($oRP11_753E179 = $oArray->get_reporter('RP11-753E17'),'get_reporter RP11-753E17');
 	cmp_ok($oRP11_753E179->reporter_id,'eq','RP11-753E17','reporter_id');
@@ -233,5 +236,62 @@ test "RP11-753E17" => sub {
     cmp_ok($oSpot3->channel2_signal,'==',12791,'spot3 ch2 signal');
 };
 
+my ($ma_plot,$scatter_plot,$heatmap_plot,$log_heatmap_plot);
+
+#12
+test "Image plotting" => sub {
+	SKIP: {
+        $ma_plot = $directory.'/../test_files/ma_plot.png';
+        # test we can write files here
+		eval { open (MAPLOT,">$ma_plot"); close MAPLOT };
+		skip "Couldn't open filehandle for creating plot", 4 if $@;
+		ok($oArray->print_ma_plot($ma_plot,scale=>50));
+
+        $scatter_plot = $directory.'/../test_files/scatter_plot.png';
+		ok($oArray->print_intensity_scatter($scatter_plot,scale=>100));
+
+        $heatmap_plot = $directory.'/../test_files/heatmap_plot.png';
+		ok($oArray->print_intensity_heatmap($heatmap_plot,scale=>100));
+
+        $log_heatmap_plot = $directory.'/../test_files/log_heatmap_plot.png';
+		ok($oArray->print_log2_heatmap($log_heatmap_plot,scale=>100));
+
+	}
+};
+
+#13
+test "Test images" => sub {
+	ok(-s $ma_plot,'the ma plot was created');
+	SKIP: {
+		skip "no ma plot to test", 2 unless (-s $ma_plot);
+		size_ok($directory.'/../test_files/ma_plot.png',[635,361],'ma plot size');
+		cmp_image($directory.'/../test_files/ma_plot.png',$directory.'/../test_files/ma_plot_c.png','ma plot matches control image');
+	}
+	unlink($ma_plot) if (-e $ma_plot);
+	
+	ok(-s $scatter_plot,'the scatter plot was created');
+	SKIP: {
+		skip "no scatter plot to test", 2 unless (-s $scatter_plot);
+		size_ok($directory.'/../test_files/scatter_plot.png',[756,756],'scatter plot size');
+		cmp_image($directory.'/../test_files/scatter_plot.png',$directory.'/../test_files/scatter_plot_c.png','scatter plot matches control image');
+	}
+	unlink($scatter_plot) if (-e $scatter_plot);
+	
+	ok(-s $heatmap_plot,'the heatmap plot was created');
+	SKIP: {
+		skip "no heatmap plot to test", 2 unless (-s $heatmap_plot);
+		size_ok($directory.'/../test_files/heatmap_plot.png',[124,382],'heatmap plot size');
+		cmp_image($directory.'/../test_files/heatmap_plot.png',$directory.'/../test_files/heatmap_plot_c.png','heatmap plot matches control image');
+	}
+	unlink($heatmap_plot) if (-e $heatmap_plot);
+	
+	ok(-s $log_heatmap_plot,'the log heatmap plot was created');
+	SKIP: {
+		skip "no log heatmap plot to test", 2 unless (-s $log_heatmap_plot);
+		size_ok($directory.'/../test_files/log_heatmap_plot.png',[124,382],'log_heatmap plot size');
+		cmp_image($directory.'/../test_files/log_heatmap_plot.png',$directory.'/../test_files/log_heatmap_plot_c.png','log_heatmap plot matches control image');
+	}
+	unlink($log_heatmap_plot) if (-e $log_heatmap_plot);
+};
 
 end_skipping_tests;

@@ -4,10 +4,12 @@ MANIFEST
 README
 t/Microarray.t
 t/Microarray-Spot.t
+t/Microarray-Reporter.t
 t/Microarray-File-GAL.t
 t/Microarray-File-Data.t
 t/Microarray-File-Data-BlueFuse.t
 t/Microarray-File-Data-Quantarray.t
+t/Microarray-Image-CGH_Plot.t
 lib/Microarray.pm
 lib/Microarray/Analysis.pm
 lib/Microarray/Analysis/CGH.pm

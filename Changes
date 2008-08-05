@@ -55,3 +55,18 @@ Revision history for Perl extension Microarray.
 	- Significant performance enhancements to CGH data smoothing (Microarray::Analysis::CGH) and plotting (Microarray::Image::CGH_Plot)
 	- Microarray::Image::CGH_Plot
 		- Added function to plot gene location
+0.45    Tue August 5 16:49:00 2008
+	- Updated Microarray, Microarray::File::Data and Microarray::File::Data:: modules to use a more sensible 'Plug-In' architecture
+	- Updated Microarray, Microarray::Image, Microarray::Image::QC_Plots and Microarray::Image::CGH_Plot to correct gdFont issues with latest release of GD
+	- Reorganised QC of spot data 
+		- now performed by the Reporter object, not the Microarray object
+		- added method to reject unique spots after QC 
+		- QC variables are now stored in $ENV
+	- Fixed many bugs
+	- Added new tests
+		- image plotting in Microarray.pm, which also tests some of the Microarray::Image::QC_Plots code as well
+		- image plotting in Microarray::Image::CGH_Plot.pm
+		- image plotting tests need extra test files downloadable from our web site - see ReadMe
+		- Microarray::Reporter
+	- Resolved some errors in Perldoc left over from earlier changes to module namespace
+	- Other Perldoc changes/updates

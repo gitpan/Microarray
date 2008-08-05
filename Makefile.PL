@@ -8,15 +8,15 @@ WriteMakefile(
     VERSION_FROM      => 'lib/Microarray.pm',
     PREREQ_PM         => {  Image::ExifTool => 6.66, 
     						GD => 2.32,
-    						GD::Image => 2.27,
-    						Statistics::Descriptive => 2.6,
 							FileHandle => 2.01,
 							File::Slurp => 9999.12,
 							File::Basename => 2.73,
-							Test::More => 0.64,
+							Module::List => 0.001,
+							Test::More => 0.62,
 							Test::Group => 0.07,
 							Test::Differences => 0.47,
-							Test::Deep => 0.096
+							Test::Deep => 0.096,
+							Test::Image::GD => 0.03
     					},
     ($] >= 5.005 ? 
       (AUTHOR         => 'Christopher Jones <c.jones@ucl.ac.uk>') : ()),
