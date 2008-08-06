@@ -12,6 +12,7 @@ WriteMakefile(
 							File::Slurp => 9999.12,
 							File::Basename => 2.73,
 							Module::List => 0.001,
+							Statistics::Descriptive => 2.6,
 							Test::More => 0.62,
 							Test::Group => 0.07,
 							Test::Differences => 0.47,
